@@ -1,11 +1,23 @@
 module Twitter.JsonIO
-
-
 open FSharp.Data
+
 open Newtonsoft.Json
 
 
-type PublishTweetJson = JsonProvider<"""{
+//Follow
+type follow = JsonProvider<"""{
+  "my_uid": 1,
+  "to_uid": 2
+}""">
+
+//Retweet
+type retweet = JsonProvider<"""{
+    "my_uid" : 1,
+    "tweet_id" : 2
+}""">
+
+//Tweet
+type tweet = JsonProvider<"""{
   "uid": 12324,
   "tweetId": 233,
   "mentions": [
@@ -18,7 +30,8 @@ type PublishTweetJson = JsonProvider<"""{
   ]
 }""">
 
-//type RegisterUser = 
 
-
-
+//Login
+type login = JsonProvider<"""{
+  "uid":1
+}""">
