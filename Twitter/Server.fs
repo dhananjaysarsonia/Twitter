@@ -17,4 +17,46 @@ module Twitter.Server
 //
 
 
-// 
+//
+
+open System.Data.SQLite
+type User =
+    {
+        UID : string
+    }
+    
+type Tweet = {
+    UID : int
+    TweetId: string
+    Tweet : string
+}
+
+type Followers = {
+    UID: int
+    Follows: int
+}
+
+type Mentions = {
+    TweetId : string
+    UID : int
+}
+
+type HashTag = {
+    hashtagID : string
+    hashtag : int
+}
+type HashTagTable = {
+    tweetId : string
+    hashtagId : string
+}
+
+
+let connectionStringMemory = sprintf "Data Source=:memory:;Version=3;New=True;" 
+let connection = new SQLiteConnection(connectionStringMemory)
+
+
+connection.Open()
+
+//let's create user table
+
+
