@@ -1,0 +1,3 @@
+/Users/forumgala/Desktop/Fall_2020/DOS/Proj4/Twitter/Twitter/obj/Debug/netcoreapp3.1/Twitter.fsprojAssemblyReference.cache
+/Users/forumgala/Desktop/Fall_2020/DOS/Proj4/Twitter/Twitter/obj/Debug/netcoreapp3.1/Twitter.AssemblyInfoInputs.cache
+/Users/forumgala/Desktop/Fall_2020/DOS/Proj4/Twitter/Twitter/obj/Debug/netcoreapp3.1/Twitter.AssemblyInfo.fs

@@ -1,0 +1,195 @@
+Index: Twitter/Server.fs
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>module Twitter.Server\n\n//server will have a receiver actor first, which will recieve all the messages and take decisions\n//every function will have it's own actor\n//so actors will be\n\n//Register Account actor-> Registers account and sends back OK message.\n//LoginUser -> user logs in, a random number is shared as repsonse ignore number. Log the metric\n//LogOutUser-> not sure how it will be used right now, but will log the metric\n//MentionsInsert\n//HashTagInsert\n//GetFeed -> will show mentions, tweets I follow\n//GetMyTweet -> will show my tweets-- Will filter mentions too. not sure if actually needed but lets put it\n//Search -> Interesting one-> filter based on hashtag or my mentions \n\n\n//\n\n\n// 
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- Twitter/Server.fs	(revision 84a6dcfc4e06ed7d16baf7510d0fb781366a6b3a)
++++ Twitter/Server.fs	(date 1606615989897)
+@@ -1,5 +1,7 @@
+ module Twitter.Server
+ 
++open FSharp.Json
++
+ //server will have a receiver actor first, which will recieve all the messages and take decisions
+ //every function will have it's own actor
+ //so actors will be
+@@ -16,5 +18,7 @@
+ 
+ //
+ 
+-
++let client_call input_string =
++    let obj = Json.deserialize input_string
++    input_string
+ // 
+\ No newline at end of file
+Index: Twitter/Simulator.fs
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- Twitter/Simulator.fs	(date 1606606852667)
++++ Twitter/Simulator.fs	(date 1606606852667)
+@@ -0,0 +1,142 @@
++module Twitter.Simulator
++
++open System
++open System.Collections
++open System.Runtime.CompilerServices
++open System.Threading.Tasks
++open Akka
++open Akka.Actor
++open Akka.Dispatch.SysMsg
++open System.Collections.Generic
++open Akka.FSharp
++open Akka.Actor
++open System.Diagnostics
++open Akka.Util
++open System.Threading;
++open FSharp.Data
++
++//let numUsers = 1000
++//let mutable tweet_id = 0
++
++//type follow = JsonProvider<"""{
++//  "my_uid": 1,
++//  "to_uid": 2
++//}""">
++//
++//type tweet = JsonProvider<"""{
++//  "uid": 12324,
++//  "tweetId": 233,
++//  "mentions": [
++//    1234,
++//    455
++//  ],
++//  "hashtags": [
++//    "lorem",
++//    "ipsum"
++//  ]
++//}""">
++//
++//type retweet = JsonProvider<"""{
++//    "my_uid" : 1,
++//    "tweet_id" : 2
++//}""">
++//
++//type login = JsonProvider<"""{
++//  "uid":1
++//}""">
++
++let client(mailbox : Actor<_>) =
++    
++    let mutable regUsers = 100
++    let mutable currentusercount = 0
++    //Register
++    
++    let Register regUsers = 
++        while regUsers < numUsers do
++            for i in currentusercount .. regUsers-1 do
++                Login i
++            let mutable catone_users = 20 * regUsers / 100
++            let mutable cattwo_users = 80 * regUsers / 100
++            
++            Follow catone_users cattwo_users
++            Tweet_catone catone_users
++            Tweet_cattwo cattwo_users
++            ReTweet_catone catone_users
++            ReTweet_cattwo cattwo_users
++            
++            regUsers <- regUsers + 100
++            currentusercount <- currentusercount + 100
++            Thread.Sleep(300)
++                    
++            
++    //Follow
++    let Follow catone_users cattwo_users =
++         
++        //Follow request to server For Category One Users (20% users having 80% followers)
++        for i in 1 .. catone_users do
++            for j in 1 .. 80 do
++                //Currently followers are serially assigned but should be randomly assigned
++                //Need to check the userid table and find unique ids to send follow request
++                //Replace j with the found userId
++                let mutable follow_request = follow.Parse("""{"my_uid": i , "to_uid": j }""")
++                //Send server follow request 
++                Twitter.Server.follow_actor follow_request
++                        
++        //Follow request to server For Category Two Users (80% users having 20% followers)
++        for i in 1 .. cattwo_users do
++             for j in 1 .. 20 do
++                  //Currently followers are serially assigned but should be randomly assigned
++                  //Need to check the userid table and find unique ids to send follow request
++                  //Replace j with the found userId
++                  let mutable follow_request = follow.Parse("""{"my_uid": i , "to_uid": j }""")
++                  //Send server follow request 
++                  Twitter.Server.follow_actor follow_request
++                  
++                  
++    //Tweet        
++    let Tweet_catone catone_users =
++        
++        //Category One users will tweet more frequently (sleep time of 3 seconds?)
++        //Randomly select mentions from the userId table
++        //Maintain a dictionary of hashtags and randomly select hashtags from it
++        for i in 1 .. catone_users do
++            tweet_id <- tweet_id + 1
++            let mutable tweettopublish = tweet.Parse("""{"uid": i, "tweetId": tweet_id, "mentions": [ 1234,455], "hashtags": [ "lorem", "ipsum"]}""")
++            Twitter.Server.publishtweet_actor tweettopublish
++            Thread.Sleep(300)
++    
++    let Tweet_cattwo cattwo_users =        
++        //Category Two users will tweet less frequently (sleep time of 8 seconds?)
++        //Randomly select mentions from the userId table
++        //Maintain a dictionary of hashtags and randomly select hashtags from it
++        for i in 1 .. cattwo_users do
++            tweet_id <- tweet_id + 1
++            let mutable tweettopublish = tweet.Parse("""{"uid": i, "tweetId": tweet_id, "mentions": [ 1234,455], "hashtags": [ "lorem", "ipsum"]}""")
++            Twitter.Server.publishtweet_actor tweettopublish
++            Thread.Sleep(800)
++        
++    
++    //Retweet
++    let ReTweet_catone catone_users =
++        //Category One users will retweet more frequently (sleep time of 3 seconds?)
++        //Randomly select tweets from the users the user Follows
++        for i in 1 .. catone_users do
++            let mutable retweet_request = tweet.Parse("""{"uid": i, "tweetId": 1234}""")
++            Twitter.Server.retweet_actor retweet_request
++            Thread.Sleep(300)
++    
++    let ReTweet_cattwo cattwo_users =        
++        //Category Two users will retweet less frequently (sleep time of 8 seconds?)
++        //Randomly select tweets from the users the user Follows
++        for i in 1 .. cattwo_users do
++            let mutable retweet_request = tweet.Parse("""{"uid": i, "tweetId": 1234}""")
++            Twitter.Server.retweet_actor retweet_request
++            Thread.Sleep(800)
++    
++    
++    //Search
++    
++    //Login
++    let Login userId =
++        let mutable login_request = login.Parse("""{"uid" : userId}""")
++        Twitter.Server.login_actor login_request
+\ No newline at end of file
+Index: Twitter/Twitter.fsproj
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><Project Sdk=\"Microsoft.NET.Sdk\">\n\n    <PropertyGroup>\n        <OutputType>Exe</OutputType>\n        <TargetFramework>netcoreapp3.1</TargetFramework>\n    </PropertyGroup>\n\n    <ItemGroup>\n        <Compile Include=\"Server.fs\" />\n        <Compile Include=\"Client.fs\" />\n        <Content Include=\"JSONDOC.txt\" />\n        <Compile Include=\"JsonIO.fs\" />\n    </ItemGroup>\n\n    <ItemGroup>\n      <PackageReference Include=\"Akka.FSharp\" Version=\"1.4.12\" />\n      <PackageReference Include=\"FSharp.Data\" Version=\"3.3.3\" />\n      <PackageReference Include=\"FSharp.Data.JsonProvider\" Version=\"0.5.0\" />\n      <PackageReference Include=\"FSharp.Json\" Version=\"0.4.0\" />\n      <PackageReference Include=\"Newtonsoft.Json\" Version=\"12.0.3\" />\n    </ItemGroup>\n\n    <ItemGroup>\n      <PackageReference Include=\"Akka\" Version=\"1.4.12\" />\n      <PackageReference Include=\"Akka.FSharp\" Version=\"1.4.12\" />\n      <PackageReference Include=\"Akka.Remote\" Version=\"1.4.12\" />\n      <PackageReference Include=\"FSharp.Data\" Version=\"3.3.3\" />\n    </ItemGroup>\n\n</Project>\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- Twitter/Twitter.fsproj	(revision 84a6dcfc4e06ed7d16baf7510d0fb781366a6b3a)
++++ Twitter/Twitter.fsproj	(date 1606615383694)
+@@ -10,6 +10,7 @@
+         <Compile Include="Client.fs" />
+         <Content Include="JSONDOC.txt" />
+         <Compile Include="JsonIO.fs" />
++        <Compile Include="Simulator.fs" />
+     </ItemGroup>
+ 
+     <ItemGroup>

@@ -10,6 +10,7 @@
         <Compile Include="Client.fs" />
         <Content Include="JSONDOC.txt" />
         <Compile Include="JsonIO.fs" />
+        <Compile Include="Simulator.fs" />
     </ItemGroup>
 
     <ItemGroup>

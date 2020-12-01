@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Condition=" '$(ExcludeRestorePackageImports)' != 'true' ">
+    <RestoreSuccess Condition=" '$(RestoreSuccess)' == '' ">True</RestoreSuccess>
+    <RestoreTool Condition=" '$(RestoreTool)' == '' ">NuGet</RestoreTool>
+    <ProjectAssetsFile Condition=" '$(ProjectAssetsFile)' == '' ">$(MSBuildThisFileDirectory)project.assets.json</ProjectAssetsFile>
+    <NuGetPackageRoot Condition=" '$(NuGetPackageRoot)' == '' ">/Users/forumgala/.nuget/packages/</NuGetPackageRoot>
+    <NuGetPackageFolders Condition=" '$(NuGetPackageFolders)' == '' ">/Users/forumgala/.nuget/packages/</NuGetPackageFolders>
+    <NuGetProjectStyle Condition=" '$(NuGetProjectStyle)' == '' ">PackageReference</NuGetProjectStyle>
+    <NuGetToolVersion Condition=" '$(NuGetToolVersion)' == '' ">5.5.0</NuGetToolVersion>
+  </PropertyGroup>
+  <PropertyGroup>
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(ExcludeRestorePackageImports)' != 'true' ">
+    <PkgNewtonsoft_Json Condition=" '$(PkgNewtonsoft_Json)' == '' ">/Users/forumgala/.nuget/packages/newtonsoft.json/12.0.3</PkgNewtonsoft_Json>
+    <PkgFSharp_Core Condition=" '$(PkgFSharp_Core)' == '' ">/Users/forumgala/.nuget/packages/fsharp.core/4.7.2</PkgFSharp_Core>
+    <PkgFSharp_Json Condition=" '$(PkgFSharp_Json)' == '' ">/Users/forumgala/.nuget/packages/fsharp.json/0.4.0</PkgFSharp_Json>
+    <PkgFSharp_Data_JsonProvider Condition=" '$(PkgFSharp_Data_JsonProvider)' == '' ">/Users/forumgala/.nuget/packages/fsharp.data.jsonprovider/0.5.0</PkgFSharp_Data_JsonProvider>
+    <PkgFSharp_Data Condition=" '$(PkgFSharp_Data)' == '' ">/Users/forumgala/.nuget/packages/fsharp.data/3.3.3</PkgFSharp_Data>
+    <PkgAkka Condition=" '$(PkgAkka)' == '' ">/Users/forumgala/.nuget/packages/akka/1.4.12</PkgAkka>
+    <PkgAkka_Remote Condition=" '$(PkgAkka_Remote)' == '' ">/Users/forumgala/.nuget/packages/akka.remote/1.4.12</PkgAkka_Remote>
+    <PkgAkka_FSharp Condition=" '$(PkgAkka_FSharp)' == '' ">/Users/forumgala/.nuget/packages/akka.fsharp/1.4.12</PkgAkka_FSharp>
+  </PropertyGroup>
+</Project>

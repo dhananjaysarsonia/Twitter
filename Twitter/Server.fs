@@ -1,5 +1,7 @@
 module Twitter.Server
 
+open FSharp.Json
+
 //server will have a receiver actor first, which will recieve all the messages and take decisions
 //every function will have it's own actor
 //so actors will be
@@ -15,6 +17,7 @@ module Twitter.Server
 
 
 //
-
-
+let client_call input_string =
+    let obj = Json.deserialize input_string
+    input_string
 // 
