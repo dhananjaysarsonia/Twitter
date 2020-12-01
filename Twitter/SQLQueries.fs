@@ -1,11 +1,7 @@
 module Twitter.SQLQueries
 
 open System.Data.SQLite
-open System.Data.SQLite
-open System.Data.SQLite
-open Akka.Actor
-open Twitter.Server
-
+open Twitter.DataTypes.Response
 
 
 let createUserTableQuery = "CREATE TABLE user(uid TEXT PRIMARY KEY, " +
@@ -41,7 +37,7 @@ let dbAddNewUser (userId: string) (password : string) (connection : SQLiteConnec
     connection.Close()
 
 let dbInsertTweet (tweetId : string) (tweet : string) (uid : string) (flag : bool) (owner : string) (connection : SQLiteConnection) =
-    connection.Open()
+    //connection.Open()
     let sql =  "INSERT INTO tweet (tweetId, tweet, uid) VALUES (@tweetId, @tweet, @uid, @flag, @owner)" 
     let command = new SQLiteCommand(sql, connection)
     command.Parameters.AddWithValue("@tweetId", tweetId) |> ignore
@@ -50,10 +46,10 @@ let dbInsertTweet (tweetId : string) (tweet : string) (uid : string) (flag : boo
     command.Parameters.AddWithValue("@flag", flag) |> ignore
     command.Parameters.AddWithValue("@owner", owner) |> ignore
     command.ExecuteNonQuery() |> ignore
-    connection.Close()
+    //connection.Close()
     
 let dbInsertFeed (uid : string) (tweetId: string) (tweet : string) (owner : string) (flag : bool) (origOwner : string)(connection : SQLiteConnection) =
-    connection.Open()
+//    connection.Open()
     let sql =  "INSERT INTO feed(uid, tweetId, tweet, owner, flag, origOwner, time) VALUES(@uid, @tweetId, @tweet, @owner, 'NULL')" 
     let command = new SQLiteCommand(sql, connection)
     command.Parameters.AddWithValue("@uid", uid) |> ignore
@@ -64,10 +60,10 @@ let dbInsertFeed (uid : string) (tweetId: string) (tweet : string) (owner : stri
     command.Parameters.AddWithValue("@origOwner", origOwner) |> ignore
 
     command.ExecuteNonQuery() |> ignore
-    connection.Close()
+    //connection.Close()
     
 let dbInsertMention(tweetId : string) (tweet : string) (mentionId : string) (uid : string) (connection : SQLiteConnection) =
-    connection.Open()
+   // connection.Open()
     let sql = "INSERT INTO mention(tweetId, tweet, mentionId, uid) VALUES(@tweetId, @tweet, @mentionId, @uid)"
     let command = new SQLiteCommand(sql, connection)
     command.Parameters.AddWithValue("@tweetId", tweetId) |> ignore
@@ -75,15 +71,15 @@ let dbInsertMention(tweetId : string) (tweet : string) (mentionId : string) (uid
     command.Parameters.AddWithValue("@mentionId", mentionId) |> ignore
     command.Parameters.AddWithValue("@uid", uid) |> ignore //owner of the tweet
     command.ExecuteNonQuery() |> ignore
-    connection.Close()
+  //  connection.Close()
     
 let dbInsertHashTag (hashtag : string)(connection : SQLiteConnection) =
-    connection.Open()
+   // connection.Open()
     let sql = "INSERT INTO hashtag_master(id, hashtag) VALUES(@id, @hashtag)"
     let command = new SQLiteCommand(sql, connection)    
     command.Parameters.AddWithValue("@hashtag", hashtag) |> ignore 
     command.ExecuteNonQuery() |> ignore
-    connection.Close()
+  //  connection.Close()
     
 let dbInsertHashTagForTweet (hashtag : string) (uid : string) (tweetId : string) (tweet : string)(connection : SQLiteConnection) =
     connection.Open()
@@ -96,73 +92,73 @@ let dbInsertHashTagForTweet (hashtag : string) (uid : string) (tweetId : string)
     command.ExecuteNonQuery() |> ignore
     connection.Close()
     
-
-type userInfo =
-    {
-        userId : string
-    }
-    
-    
-type userList = {
-    rows : list<userInfo>
-}
-    
-type tweet = {
-    tweetId : string
-    tweet : string
-    uid : string //owner
-    flag : bool //true means it's a retweet
-    origTweetId : string //original owner if retweeted 
-}
-
-type tweetList = {
-    tweets : list<tweet>
-}
-
-type feed_row = {
-    uid : string
-    tweet : tweet
-    date : string
-}
-
-type feeds ={
-    uid : string
-    rows : list<feed_row> 
-}
-
-type mention = {
-    userId : string
-    tweetId : string
-    tweet : string
-    tweetOwner : string
-}
-type mentions = {
-    userId : string
-    rows : list<mention>
-}
-
-type hashtag = {
-    hashtag : string
-}
-
-type hashtags = {
-    data : list<string>
-}
-type hashtagsInTweet = {
-    tweetId : string
-    rows : list<hashtag>
-}
-
-type tweetsInHashTag = {
-    hashtag : string
-    hashtagId : string
-    rows : list<tweet>
-}
-
-type mentionInTweets = {
-    userId : string
-    rows : list<tweet>
-}
+//
+//type userInfo =
+//    {
+//        userId : string
+//    }
+//    
+//    
+//type userList = {
+//    rows : list<userInfo>
+//}
+//    
+//type tweet = {
+//    tweetId : string
+//    tweet : string
+//    uid : string //owner
+//    flag : bool //true means it's a retweet
+//    origTweetId : string //original owner if retweeted 
+//}
+//
+//type tweetList = {
+//    tweets : list<tweet>
+//}
+//
+//type feed_row = {
+//    uid : string
+//    tweet : tweet
+//    date : string
+//}
+//
+//type feeds ={
+//    uid : string
+//    rows : list<feed_row> 
+//}
+//
+//type mention = {
+//    userId : string
+//    tweetId : string
+//    tweet : string
+//    tweetOwner : string
+//}
+//type mentions = {
+//    userId : string
+//    rows : list<mention>
+//}
+//
+//type hashtag = {
+//    hashtag : string
+//}
+//
+//type hashtags = {
+//    data : list<string>
+//}
+//type hashtagsInTweet = {
+//    tweetId : string
+//    rows : list<hashtag>
+//}
+//
+//type tweetsInHashTag = {
+//    hashtag : string
+//    hashtagId : string
+//    rows : list<tweet>
+//}
+//
+//type mentionInTweets = {
+//    userId : string
+//    rows : list<tweet>
+//}
 
 let dbGetTweetFotTweetIdWithConnectionOpen (tweetId : string) (connection : SQLiteConnection) =
     let mutable tweets : list<tweet> = []
@@ -335,8 +331,13 @@ let dbGetUserFollowers(uid : string) ( connection : SQLiteConnection) =
             userId = reader.["uid"].ToString()
         }
         users <- users @ [row]
-    connection.Close()
+        
+    let userList : userList = {
+        rows = users
+    }
     
+    connection.Close()
+    userList
 
 
 
