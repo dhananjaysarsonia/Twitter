@@ -106,73 +106,7 @@ let dbInsertFollow (fromId : string) (toId : string) (connection : SQLiteConnect
     command.ExecuteNonQuery () |> ignore
     connection.Close ()
     
-//
-//type userInfo =
-//    {
-//        userId : string
-//    }
-//    
-//    
-//type userList = {
-//    rows : list<userInfo>
-//}
-//    
-//type tweet = {
-//    tweetId : string
-//    tweet : string
-//    uid : string //owner
-//    flag : bool //true means it's a retweet
-//    origTweetId : string //original owner if retweeted 
-//}
-//
-//type tweetList = {
-//    tweets : list<tweet>
-//}
-//
-//type feed_row = {
-//    uid : string
-//    tweet : tweet
-//    date : string
-//}
-//
-//type feeds ={
-//    uid : string
-//    rows : list<feed_row> 
-//}
-//
-//type mention = {
-//    userId : string
-//    tweetId : string
-//    tweet : string
-//    tweetOwner : string
-//}
-//type mentions = {
-//    userId : string
-//    rows : list<mention>
-//}
-//
-//type hashtag = {
-//    hashtag : string
-//}
-//
-//type hashtags = {
-//    data : list<string>
-//}
-//type hashtagsInTweet = {
-//    tweetId : string
-//    rows : list<hashtag>
-//}
-//
-//type tweetsInHashTag = {
-//    hashtag : string
-//    hashtagId : string
-//    rows : list<tweet>
-//}
-//
-//type mentionInTweets = {
-//    userId : string
-//    rows : list<tweet>
-//}
+
 
 let dbGetTweetFotTweetIdWithConnectionOpen (tweetId : string) (connection : SQLiteConnection) =
     let mutable tweets : list<tweet> = []
@@ -274,15 +208,7 @@ let dbGetMentionsOfUser (uid : string) (connection : SQLiteConnection) =
         
     }
     mentionData
-   
-//   let data : mentions = {
-//       userId = userId
-//       rows = rows
-//   }
-        
-    
-//let createMentionTable = "Create TABLE mention( tweetId TEXT," +
-//                         "tweet TEXT,mentionId TEXT, uid TEXT, FOREIGN KEY(mentionId) REFERENCES user(uid));"    
+
     
 
 //get all hashtags

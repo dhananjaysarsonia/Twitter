@@ -21,19 +21,14 @@ module Twitter.Server
 
 open System.Collections.Generic
 open System.Data.SQLite
-open System.Data.SQLite
-open System.Data.SQLite
-open System.Data.SQLite
 open Akka.Actor
 open FSharp.Data.JsonProvider
 open FSharp.Json
 open Twitter.DataTypes
 open Twitter.DataTypes.Request
 open Twitter.DataTypes.Response
-open Twitter.SQLQueries
 open Akka.FSharp
 
-open FSharp.Json
 
 
 
@@ -184,7 +179,7 @@ let tweetActor(mailBox : Actor<_>) =
             connection.Close()
             
  
-//******************************** need to call feed actor here
+//********************************  call feed actor here
             let tweetForFeed : Request.tweetSubmitRequest = {
                 tweet = tweet.tweet
                 tweetId = tweetIdGen

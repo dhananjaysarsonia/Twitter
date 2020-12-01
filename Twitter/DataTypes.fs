@@ -219,3 +219,13 @@ module Request =
     type feedRequest = {
         uid : string
     }
+    
+module simulator =
+    type master = {
+        option : string
+        data : string
+    }
+    type tweetData = {
+        tweet : string
+        uid : string
+    }
