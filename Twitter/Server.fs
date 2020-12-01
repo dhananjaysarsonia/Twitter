@@ -21,7 +21,11 @@ module Twitter.Server
 
 open System.Collections.Generic
 open System.Data.SQLite
+open System.Data.SQLite
+open System.Data.SQLite
+open System.Data.SQLite
 open Akka.Actor
+open FSharp.Data.JsonProvider
 open FSharp.Json
 open Twitter.DataTypes
 open Twitter.DataTypes.Request
@@ -37,7 +41,37 @@ open FSharp.Json
 
 
 let connectionStringMemory = sprintf "Data Source=:memory:;Version=3;New=True;" 
-//let connection = new SQLiteConnection(connectionStringMemory)
+let connection = new SQLiteConnection(connectionStringMemory)
+//table creation logic 
+connection.Open()
+//create user table
+let mutable command = new SQLiteCommand (SQLQueries.createUserTableQuery, connection)
+command.ExecuteNonQuery |> ignore
+//create follower table
+command <- new SQLiteCommand (SQLQueries.createFollowerTable, connection)
+command.ExecuteNonQuery |> ignore
+
+//create tweet table
+command <- new SQLiteCommand (SQLQueries.createTweetTable, connection)
+command.ExecuteNonQuery |> ignore
+
+//create mention table
+command <- new SQLiteCommand (SQLQueries.createMentionTable, connection)
+command.ExecuteNonQuery |> ignore
+
+//create hashtag table
+command <- new SQLiteCommand (SQLQueries.createHashTagTable, connection)
+command.ExecuteNonQuery |> ignore
+
+//create hashtagTweet table
+command <- new SQLiteCommand (SQLQueries.createHashTagTweetTable, connection)
+command.ExecuteNonQuery |> ignore
+
+//create feed table
+command <- new SQLiteCommand (SQLQueries.feedTable, connection)
+command.ExecuteNonQuery |> ignore
+
+connection.Close()
 //connection.Open()
 let config =
     Configuration.parse
@@ -75,7 +109,8 @@ let registerActor(mailBox : Actor<_>) =
         return! loop()
     }
     loop()
-
+    
+let RegistrationActor = spawn system "REGISTER_ACTOR" registerActor
 
 let getFeedActor(mailBox : Actor<_>) =
     let rec loop() = actor{
@@ -96,7 +131,7 @@ let getFeedActor(mailBox : Actor<_>) =
     }
     loop()
     
-
+let FeedActor = spawn system "FEED_ACTOR" getFeedActor
 let updateFeedsActor(mailBox : Actor<_>) =
     let rec loop() = actor{
         let! message = mailBox.Receive()
@@ -120,6 +155,8 @@ let updateFeedsActor(mailBox : Actor<_>) =
     
     loop()
     
+let UpdateFeedActor = spawn system "UPDATE_FEED_ACTOR" updateFeedsActor
+    
 let tweetActor(mailBox : Actor<_>) =
     let rec loop() = actor{
         let! message = mailBox.Receive()
@@ -133,20 +170,34 @@ let tweetActor(mailBox : Actor<_>) =
             let connection = new SQLiteConnection(connectionStringMemory)    
             //check if it's a retweet
             let timestamp = System.DateTime.Now.ToString()
-            let tweetId = tweet.uid + timestamp
+            let tweetIdGen = tweet.uid + timestamp
             connection.Open()
-            SQLQueries.dbInsertTweet tweetId tweet.tweet tweet.uid tweet.isRetweet tweet.origOwner connection
+            SQLQueries.dbInsertTweet tweetIdGen tweet.tweet tweet.uid tweet.isRetweet tweet.origOwner connection
             
             //if not a retweet we need to put mentions and hash tags
             if not tweet.isRetweet then
                 for hashtag in tweet.hashtags do
                     SQLQueries.dbInsertHashTag hashtag connection
                 for mention in tweet.mentions do
-                    SQLQueries.dbInsertMention tweetId tweet.tweet mention tweet.uid connection
+                    SQLQueries.dbInsertMention tweetIdGen tweet.tweet mention tweet.uid connection
                 
             connection.Close()
+            
  
-    
+//******************************** need to call feed actor here
+            let tweetForFeed : Request.tweetSubmitRequest = {
+                tweet = tweet.tweet
+                tweetId = tweetIdGen
+                //flag = tweet.flag
+                isRetweet = tweet.isRetweet
+                mentions = tweet.mentions
+                hashtags = tweet.hashtags
+                uid = tweet.uid
+                origOwner = tweet.origOwner
+                
+            }
+            FeedActor <! Json.serialize tweetForFeed
+
     
         return! loop()    
     }
@@ -154,9 +205,78 @@ let tweetActor(mailBox : Actor<_>) =
     loop()
 
 
+ 
+let TweetActor = spawn system "TWEET_ACTOR" tweetActor
     
 
+let followActor(mailBox : Actor<_>) =
+    let rec loop() = actor{
+        let! message = mailBox.Receive ()
+        let res = Json.deserialize<Request.followRequest> message
+        let connection = new SQLiteConnection(connectionStringMemory)
+        SQLQueries.dbInsertFollow res.uid res.follow_id connection
+        
+        printf "user followed"
+        return! loop()
+    }
+    loop()
+    
+let FollowActor = spawn system "FOLLOW_ACTOR" followActor
+//search actor have types
+    //search hashtags
+    //search tweets with mymentions
+    //search all users
+    //search tweet with hashtags
+    
+    
+let searchActor(mailBox : Actor<_>) =
+    let rec loop() = actor{
+        //second time parsing will be done here
+        let! message  = mailBox.Receive ()
+        
+        let searchMaster = Json.deserialize<Request.searchMaster> message
+        match searchMaster.option with
+        | Request.myMentionSearch ->
+            let data = Json.deserialize<Request.searchMyMentionRequest> searchMaster.data
+            let connection = new SQLiteConnection(connectionStringMemory)
 
+            let res = SQLQueries.dbGetMentionsOfUser data.uid connection
+            responseSend mailBox.Context.Sender DataTypes.Response.types.mentionResponse (Json.serialize res)
+           
+            printf "mentionSearchCalled"
+        
+        | Request.allHashtagSearch ->
+            let data = Json.deserialize<Request.searchAllHashTags> searchMaster.data
+            let connection = new SQLiteConnection(connectionStringMemory)
+
+            let res = SQLQueries.dbGetAllHashTag connection
+            responseSend mailBox.Context.Sender DataTypes.Response.types.allHashTagSearchResponse (Json.serialize res)
+            
+            
+        | Request.userSearch ->
+            printf ""
+            let data = Json.deserialize<Request.searchAllUsers> searchMaster.data
+            
+            let connection = new SQLiteConnection(connectionStringMemory)
+            let res = SQLQueries.dbGetAllUsers connection
+            responseSend mailBox.Context.Sender DataTypes.Response.types.allUserInfoResponse (Json.serialize res)
+            
+        | Request.tweetWithHashTagSearch ->
+            let data = Json.deserialize<Request.searchTweetWithHashTagRequest> searchMaster.data
+            let connection = new SQLiteConnection(connectionStringMemory)
+            let res = SQLQueries.dbGetTweetWithTag data.hashtag connection
+            responseSend mailBox.Context.Sender DataTypes.Response.types.hashTagTweetsResponse (Json.serialize res)
+            
+        | _ ->
+            printf "someError"
+        
+        
+        
+        return! loop()
+    }
+    loop()
+    
+let SearchActor = spawn system "SEARCH_ACTOR" followActor
 
 let serverActor(mailBox : Actor<_>) =
     let rec loop() = actor{
@@ -179,18 +299,23 @@ let serverActor(mailBox : Actor<_>) =
             liveActorMap.Remove(logoutData.uid) |> ignore
             
         | Request.types.submitTweetRequest ->
-            printf "tweet"
+            TweetActor <! res.data
             
-        | "retweet" ->
-            printf "retweet"
+        | Request.types.submitReTweetRequest ->
+            TweetActor <! res.data
             
-        | "follow" ->
+        | Request.types.followRequest ->
             printf "follow"
-        | "feed" ->
-            printf "feed"
+            FollowActor <! res.data
+        | Request.types.feedRequest ->
+            FeedActor <! res.data
         
-        | "search" ->
+        | Request.types.searchRequest ->
             printf "search" // can be of multiple types
+            SearchActor <! res.data
+        
+        | _ ->
+            printf "someError"
         
         return! loop()
     }
@@ -199,6 +324,7 @@ let serverActor(mailBox : Actor<_>) =
 
 
 
+let ServerActor = spawn system "server" followActor
 
 
 

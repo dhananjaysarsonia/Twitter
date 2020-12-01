@@ -1,6 +1,10 @@
 module Twitter.SQLQueries
 
 open System.Data.SQLite
+open System.Data.SQLite
+open System.Data.SQLite
+open System.Data.SQLite
+open System.Security.Cryptography
 open Twitter.DataTypes.Response
 
 
@@ -91,6 +95,16 @@ let dbInsertHashTagForTweet (hashtag : string) (uid : string) (tweetId : string)
     command.Parameters.AddWithValue("@tweet", tweet) |> ignore
     command.ExecuteNonQuery() |> ignore
     connection.Close()
+    
+    
+let dbInsertFollow (fromId : string) (toId : string) (connection : SQLiteConnection) =
+    connection.Open()
+    let sql = "INSERT INTO follows(uid, follows) VALUES( @fromId, @toId)"
+    let command = new SQLiteCommand(sql, connection)
+    command.Parameters.AddWithValue("@fromId", fromId) |> ignore
+    command.Parameters.AddWithValue("@toId", toId) |> ignore
+    command.ExecuteNonQuery () |> ignore
+    connection.Close ()
     
 //
 //type userInfo =
@@ -338,6 +352,27 @@ let dbGetUserFollowers(uid : string) ( connection : SQLiteConnection) =
     
     connection.Close()
     userList
+    
+let dbGetAllUsers (connection : SQLiteConnection) =
+    connection.Open ()
+    let sql = "SELECT * from user"
+    let command = new SQLiteCommand(sql, connection)
+    let mutable users : list<userInfo> = []
+    let reader = command.ExecuteReader()
+    while reader.Read() do
+        let row : userInfo = {
+            userId = reader.["uid"].ToString()
+        }
+        users <- users @ [row]
+    
+    connection.Close()
+    let userList : userList = {
+        rows = users
+    }
+    connection.Close()
+    userList
+   
+
 
 
 

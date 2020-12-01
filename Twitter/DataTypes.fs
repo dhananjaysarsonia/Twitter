@@ -2,6 +2,7 @@
 module Twitter.DataTypes
 open System.Data.SQLite
 open FSharp.Json
+//open Twitter.DataTypes.Response
 
 module Response =
     module types = 
@@ -31,6 +32,8 @@ module Response =
         let sendTweetResponse = "tweetResponse"
         [<Literal>]
         let sendTweetInFeed = "tweetFeedInsertResponse"
+        [<Literal>]
+        let allUserInfoResponse = "allUserInfoResponse"
     
     
     
@@ -115,6 +118,9 @@ module Request =
         let submitTweetRequest = "submitTweetRequest"
         
         [<Literal>]
+        let submitReTweetRequest = "submitReTweetRequest"
+        
+        [<Literal>]
         let feedRequest = "feedRequest"
         [<Literal>]
         let tweetDetailRequest = "tweetDetailRequest"
@@ -132,11 +138,30 @@ module Request =
         let loginRequest = "loginRequest"
         [<Literal>]
         let logoutRequest = "logoutRequest"
+        
+        [<Literal>]
+        let followRequest = "followRequest"
+        
+        [<Literal>]
+        let searchRequest = "searchRequest"
     
     
     
     
     type masterData = {
+        option : string
+        data : string
+    }
+    
+    [<Literal>]
+    let myMentionSearch = "myMention"
+    [<Literal>]
+    let allHashtagSearch = "allHashtagSearch"
+    [<Literal>]
+    let userSearch = "userSearch"
+    [<Literal>]
+    let tweetWithHashTagSearch = "tweetWithHashTagSearch"
+    type searchMaster = {
         option : string
         data : string
     }
@@ -170,11 +195,20 @@ module Request =
         tweet_id : string
     }
     
-    type searchHashTagRequest = {
+    type searchTweetWithHashTagRequest = {
        uid : string
-       to_search : string
+       hashtag : string
+    }
+    type searchAllTweetsRequest = {
+        uid : string
     }
     type searchMyMentionRequest = {
+        uid : string
+    }
+    type searchAllHashTags = {
+        uid : string
+    }
+    type searchAllUsers = {
         uid : string
     }
     
