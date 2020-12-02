@@ -14,121 +14,103 @@ open System.Diagnostics
 open Akka.Util
 open System.Threading;
 open FSharp.Data
-open Twitter.Client.Data_types
+open Twitter.DataTypes.simulator
 
-let numUsers = 1000
-let mutable tweet_id = 0
+let totalUsers = 1000
 
 let system = System.create "system" (Configuration.defaultConfig())
 
 type Message =
-    | Register
-    | Login
-    | Follow of int*int
-    | Tweet
-    | Retweet
-    | Search
-    | Logout
-    | Response
+    | Start
+    | BeginProcess
+    | Done
+
    
 let random = new System.Random()
 
-let simulator(mailbox : Actor<_>) =
-    let mutable regUsers = 100
-    let mutable currentusercount = 0
-    let rec loop () = actor {
-                let! message = mailbox.Receive ()
-                match message with
-                | Register ->
-                    while regUsers < numUsers do
-                        for i in currentusercount .. regUsers-1 do
-                            Client.Login i
-                        let mutable catone_users = 20 * regUsers / 100
-                        let mutable cattwo_users = 80 * regUsers / 100
-                        
-                        // Right after registering Follow somebody
-                        mailbox.Self <! Follow catone_users cattwo_users
-                        
-                        regusers <- regusers + 100
-                        currentusercount <- currentusercount + 100
-                        
-                        //Without making the actor sleep, pause registering for 3 seconds and resume with new 100 users.
-                        //Thread.Sleep(300)
-                        
-                //| Login ->
-                    //Randomly login 10% of inactive users every __ seconds
-                    
-                | Follow category_one category_two ->
-                    
-                    //Follow request to client For Category One Users (20% users having 80% followers)
-                    for i in 1 .. category_one do
-                        for j in 1 .. 80 do
-                            //Currently follow_id is randomly selected but ideally should be checked if they already follow each other (uniqueness)
-                            let mutable follow_id = random.Next(regUsers)
-                            Client.Follow i follow_id
-                                    
-                    //Follow request to client For Category Two Users (80% users having 20% followers)
-                    for i in 1 .. category_two do
-                         for j in 1 .. 20 do
-                            //Currently follow_id is randomly selected but ideally should be checked if they already follow each other (uniqueness)
-                            let mutable follow_id = random.Next(regUsers)
-                            Client.Follow i follow_id
-                            
-                | Tweet ->
-                    
-                    
-                //| Logout ->
-                    //Randomly logout 10% of active users every __ seconds
-    }
-    
-let simulator_actor = spawn system "simulator" simulator
-simulator_actor <! Register
+//To track active-inactive states of users
+let active_state = Array.zeroCreate totalUsers
 
+// Create a list of hashtags
+let hashtag_list = []
+
+let simulator(mailbox : Actor<_>) =
+        let! message = mailbox.Receive()
+        match message with
+        | Start ->
+            //Register
+            //for i in 1..numUsers do
+                //Send client an message to register with uid = i
+            //All users are registered
+            // Send actions_actor <! BeginProcess
+            
+        //| Done ->
+            //Terminate                
+                
+let actions_actor(mailbox : Actor<_>) =
+    let rec loop() = actor{
+        let! message = mailBox.Receive()
+        match message with
+        | BeginProcess ->
+            //Login-Logout
+            //Randomly select 50 actors from inactive state , spawn actors for the 50 users, send login request to client, update state to active
+            //Send a message to begin activities
+            //Each actor, after finishing the activities(count decided by category), receives a message and Logout, change active state and Kill the actor.
+            //Repeat n times and send done message to the simulator.
+            
+        //Actions to be performed after login
+        // 50 active actors will randomly select (1-5) and perform actions (?????)
+        //{
+            // 1-Follow
+            // 1 day/Cycle/Time{
+                //For the 50 actors logged-in, first actor will have 49 followers, second actor will have 25 actors,so on
+                // user1 - n-1 - 49
+                // user2 - n/2 - 25
+                // user3 - n/3 - 17
+                // user4 - n/4 - 13
+                // user5 - n/5 - 10 ..... user35 - n/35 - 1 ...user50 - n/50- 1 followers
+            //}            
+            
+            // 2-Tweet
+                // 1 day/Cycle/Time{
+                    // For 50 actors logged-in , first actor will do 25 tweets, second actor will do 17 tweets,so on
+                    // user1 - n/2 - 25
+                    // user2 - n/3 - 17
+                    // user3 - n/4 - 13
+                    // user4 - n/5 - 10 ..... user35 - n/35 - 1 ...user50 - n/50- 1 tweet
+                
+                    //Tweet Request - " Blah Blah Blah @user_id Blah Blah Blah Blah #hashtag #hashtag" where user_id is randomly selected from numUsers and hashtag is randomly selected from hashtags_list
+                //}
+                
+            // 3-Retweet
+                 // 1 day/Cycle/Time{
+                    // For 50 actors logged-in , first actor will do 25 retweets, second actor will do 17 retweets,so on
+                    // user1 - n/2 - 25
+                    // user2 - n/3 - 17
+                    // user3 - n/4 - 13
+                    // user4 - n/5 - 10 ..... user35 - n/35 - 1 ...user50 - n/50- 1 retweet
+                
+                    //Retweet_id randomly selected from tweet_ids(????)
+                //}
+                
+            // 4-Search
+                // 1 day/Cycle/Time{
+                    // For 50 actors logged-in , first actor will do 10 searches, second actor will do 5 retweets,so on
+                    // user1 - n/5 - 10
+                    // user2 - n/10 - 5
+                    // user3 - n/15 - 3
+                    // user4 - n/20 - 3 ..... user35 - n/35 - 0 ...user50 - n/50- 0 search
+                
+                    //Search type randomly selected between search_hashtag and search_my_mentions
+                        // search hashtag - randomly select a hashtag from hashtags_list
+                        // search my_mentions -  send userid
+                //}
                   
-    //Tweet        
-    let Tweet_catone catone_users =
+                
+        //}
         
-        //Category One users will tweet more frequently (sleep time of 3 seconds?)
-        //Randomly select mentions from the userId table
-        //Maintain a dictionary of hashtags and randomly select hashtags from it
-        for i in 1 .. catone_users do
-            tweet_id <- tweet_id + 1
-            let mutable tweettopublish = tweet.Parse("""{"uid": i, "tweetId": tweet_id, "mentions": [ 1234,455], "hashtags": [ "lorem", "ipsum"]}""")
-            Twitter.Server.publishtweet_actor tweettopublish
-            Thread.Sleep(300)
-    
-    let Tweet_cattwo cattwo_users =        
-        //Category Two users will tweet less frequently (sleep time of 8 seconds?)
-        //Randomly select mentions from the userId table
-        //Maintain a dictionary of hashtags and randomly select hashtags from it
-        for i in 1 .. cattwo_users do
-            tweet_id <- tweet_id + 1
-            let mutable tweettopublish = tweet.Parse("""{"uid": i, "tweetId": tweet_id, "mentions": [ 1234,455], "hashtags": [ "lorem", "ipsum"]}""")
-            Twitter.Server.publishtweet_actor tweettopublish
-            Thread.Sleep(800)
-        
-    
-    //Retweet
-    let ReTweet_catone catone_users =
-        //Category One users will retweet more frequently (sleep time of 3 seconds?)
-        //Randomly select tweets from the users the user Follows
-        for i in 1 .. catone_users do
-            let mutable retweet_request = tweet.Parse("""{"uid": i, "tweetId": 1234}""")
-            Twitter.Server.retweet_actor retweet_request
-            Thread.Sleep(300)
-    
-    let ReTweet_cattwo cattwo_users =        
-        //Category Two users will retweet less frequently (sleep time of 8 seconds?)
-        //Randomly select tweets from the users the user Follows
-        for i in 1 .. cattwo_users do
-            let mutable retweet_request = tweet.Parse("""{"uid": i, "tweetId": 1234}""")
-            Twitter.Server.retweet_actor retweet_request
-            Thread.Sleep(800)
-    
-    
-    //Search
-    
-    //Login
-    let Login userId =
-        let mutable login_request = login.Parse("""{"uid" : userId}""")
-        Twitter.Server.login_actor login_request
+    }
+
+
+//let simulator_actor = spawn system "simulator" simulator
+//simulator_actor <! Start

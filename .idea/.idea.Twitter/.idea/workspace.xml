@@ -22,16 +22,27 @@
     <select />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c686548a-329b-40ea-9a66-71bbd93b14af" name="Default Changelist" comment="Client updated">
-      <change afterPath="$PROJECT_DIR$/Twitter/Simulator.fs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Twitter/Client.fs" beforeDir="false" afterPath="$PROJECT_DIR$/Twitter/Client.fs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Twitter/Server.fs" beforeDir="false" afterPath="$PROJECT_DIR$/Twitter/Server.fs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Twitter/Twitter.fsproj" beforeDir="false" afterPath="$PROJECT_DIR$/Twitter/Twitter.fsproj" afterDir="false" />
+    <list default="true" id="c686548a-329b-40ea-9a66-71bbd93b14af" name="Default Changelist" comment="//">
+      <change beforePath="$PROJECT_DIR$/Twitter/Simulator.fs" beforeDir="false" afterPath="$PROJECT_DIR$/Twitter/Simulator.fs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Twitter/obj/Debug/netcoreapp3.1/Twitter.assets.cache" beforeDir="false" afterPath="$PROJECT_DIR$/Twitter/obj/Debug/netcoreapp3.1/Twitter.assets.cache" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Twitter/obj/Debug/netcoreapp3.1/Twitter.fsproj.CoreCompileInputs.cache" beforeDir="false" afterPath="$PROJECT_DIR$/Twitter/obj/Debug/netcoreapp3.1/Twitter.fsproj.CoreCompileInputs.cache" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Twitter/obj/Debug/netcoreapp3.1/Twitter.fsprojAssemblyReference.cache" beforeDir="false" afterPath="$PROJECT_DIR$/Twitter/obj/Debug/netcoreapp3.1/Twitter.fsprojAssemblyReference.cache" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Twitter/obj/Twitter.fsproj.nuget.dgspec.json" beforeDir="false" afterPath="$PROJECT_DIR$/Twitter/obj/Twitter.fsproj.nuget.dgspec.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Twitter/obj/Twitter.fsproj.nuget.g.props" beforeDir="false" afterPath="$PROJECT_DIR$/Twitter/obj/Twitter.fsproj.nuget.g.props" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Twitter/obj/Twitter.fsproj.nuget.g.targets" beforeDir="false" afterPath="$PROJECT_DIR$/Twitter/obj/Twitter.fsproj.nuget.g.targets" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Twitter/obj/project.assets.json" beforeDir="false" afterPath="$PROJECT_DIR$/Twitter/obj/project.assets.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Twitter/obj/project.nuget.cache" beforeDir="false" afterPath="$PROJECT_DIR$/Twitter/obj/project.nuget.cache" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Twitter/obj/project.packagespec.json" beforeDir="false" afterPath="$PROJECT_DIR$/Twitter/obj/project.packagespec.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Twitter/obj/rider.project.restore.info" beforeDir="false" afterPath="$PROJECT_DIR$/Twitter/obj/rider.project.restore.info" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ExportToHTMLSettings">
+    <option name="printScope" value="1" />
+    <option name="OUTPUT_DIRECTORY" value="$PROJECT_DIR$/Twitter" />
   </component>
   <component name="Git.Pull.Settings">
     <option name="BRANCH" value="ServerBranchDJ" />
@@ -76,9 +87,9 @@
       <list>
         <option value="$PROJECT_DIR$/Twitter/JsonIO.fs" />
         <option value="$PROJECT_DIR$/Twitter/Data_types.fs" />
-        <option value="$PROJECT_DIR$/Twitter/Simulator.fs" />
         <option value="$PROJECT_DIR$/Twitter/Client.fs" />
         <option value="$PROJECT_DIR$/Twitter/Server.fs" />
+        <option value="$PROJECT_DIR$/Twitter/Simulator.fs" />
       </list>
     </option>
   </component>
@@ -121,7 +132,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1606424638524</updated>
-      <workItem from="1606424643869" duration="28726000" />
+      <workItem from="1606424643869" duration="36381000" />
     </task>
     <task id="LOCAL-00001" summary="//">
       <created>1606431516518</created>
@@ -144,7 +155,21 @@
       <option name="project" value="LOCAL" />
       <updated>1606616082695</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="//">
+      <created>1606853381938</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1606853381939</updated>
+    </task>
+    <task id="LOCAL-00005" summary="//">
+      <created>1606853416470</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1606853416470</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -165,11 +190,15 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="CLEAR_INITIAL_COMMIT_MESSAGE" value="true" />
-    <MESSAGE value="//" />
     <MESSAGE value="Client updated" />
-    <option name="LAST_COMMIT_MESSAGE" value="Client updated" />
+    <MESSAGE value="//" />
+    <option name="LAST_COMMIT_MESSAGE" value="//" />
   </component>
   <component name="WindowStateProjectService">
+    <state x="481" y="293" key="MultipleFileMergeDialog" timestamp="1606853432559">
+      <screen x="0" y="0" width="1680" height="1050" />
+    </state>
+    <state x="481" y="293" key="MultipleFileMergeDialog/1680.-91.1440.900/0.0.1680.1050@0.0.1680.1050" timestamp="1606853432559" />
     <state x="440" y="264" key="Rider.ProjectTemplateDialog.Size" timestamp="1606853114191">
       <screen x="0" y="0" width="1680" height="1050" />
     </state>
@@ -182,9 +211,10 @@
       <screen x="0" y="0" width="1680" height="1050" />
     </state>
     <state x="587" y="426" key="git4idea.ui.GitResetDialog/1680.-91.1440.900/0.0.1680.1050@0.0.1680.1050" timestamp="1606852971316" />
-    <state x="503" y="231" width="672" height="678" key="search.everywhere.popup" timestamp="1606594088447">
-      <screen x="0" y="0" width="1680" height="1050" />
+    <state x="383" y="176" width="672" height="517" key="search.everywhere.popup" timestamp="1606873565347">
+      <screen x="0" y="0" width="1280" height="800" />
     </state>
+    <state x="383" y="176" width="672" height="517" key="search.everywhere.popup/0.0.1280.800@0.0.1280.800" timestamp="1606873565347" />
     <state x="503" y="231" width="672" height="678" key="search.everywhere.popup/1680.-91.1440.900/0.0.1680.1050@0.0.1680.1050" timestamp="1606594088447" />
   </component>
 </project>

@@ -12,10 +12,16 @@
   <PropertyGroup>
     <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
   </PropertyGroup>
+  <ImportGroup Condition=" '$(ExcludeRestorePackageImports)' != 'true' ">
+    <Import Project="$(NuGetPackageRoot)entityframework/6.3.0/buildTransitive/EntityFramework.props" Condition="Exists('$(NuGetPackageRoot)entityframework/6.3.0/buildTransitive/EntityFramework.props')" />
+  </ImportGroup>
   <PropertyGroup Condition=" '$(ExcludeRestorePackageImports)' != 'true' ">
+    <PkgEntityFramework Condition=" '$(PkgEntityFramework)' == '' ">/Users/forumgala/.nuget/packages/entityframework/6.3.0</PkgEntityFramework>
+    <PkgSystem_Data_SQLite_EF6 Condition=" '$(PkgSystem_Data_SQLite_EF6)' == '' ">/Users/forumgala/.nuget/packages/system.data.sqlite.ef6/1.0.113</PkgSystem_Data_SQLite_EF6>
+    <PkgSystem_Data_SQLite Condition=" '$(PkgSystem_Data_SQLite)' == '' ">/Users/forumgala/.nuget/packages/system.data.sqlite/1.0.113.6</PkgSystem_Data_SQLite>
     <PkgNewtonsoft_Json Condition=" '$(PkgNewtonsoft_Json)' == '' ">/Users/forumgala/.nuget/packages/newtonsoft.json/12.0.3</PkgNewtonsoft_Json>
     <PkgFSharp_Core Condition=" '$(PkgFSharp_Core)' == '' ">/Users/forumgala/.nuget/packages/fsharp.core/4.7.2</PkgFSharp_Core>
-    <PkgFSharp_Json Condition=" '$(PkgFSharp_Json)' == '' ">/Users/forumgala/.nuget/packages/fsharp.json/0.4.0</PkgFSharp_Json>
+    <PkgFSharp_Json Condition=" '$(PkgFSharp_Json)' == '' ">/Users/forumgala/.nuget/packages/fsharp.json/0.3.4</PkgFSharp_Json>
     <PkgFSharp_Data_JsonProvider Condition=" '$(PkgFSharp_Data_JsonProvider)' == '' ">/Users/forumgala/.nuget/packages/fsharp.data.jsonprovider/0.5.0</PkgFSharp_Data_JsonProvider>
     <PkgFSharp_Data Condition=" '$(PkgFSharp_Data)' == '' ">/Users/forumgala/.nuget/packages/fsharp.data/3.3.3</PkgFSharp_Data>
     <PkgAkka Condition=" '$(PkgAkka)' == '' ">/Users/forumgala/.nuget/packages/akka/1.4.12</PkgAkka>
