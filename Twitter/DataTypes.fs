@@ -27,13 +27,14 @@ module Response =
         let loginResponse = "loginResponse"
         [<Literal>]
         let logoutResponse = "logoutResponse"
-        
         [<Literal>]
         let sendTweetResponse = "tweetResponse"
         [<Literal>]
         let sendTweetInFeed = "tweetFeedInsertResponse"
         [<Literal>]
         let allUserInfoResponse = "allUserInfoResponse"
+        [<Literal>]
+        let followResponse = "followResponse"
     
     
     
@@ -138,15 +139,10 @@ module Request =
         let loginRequest = "loginRequest"
         [<Literal>]
         let logoutRequest = "logoutRequest"
-        
         [<Literal>]
         let followRequest = "followRequest"
-        
         [<Literal>]
         let searchRequest = "searchRequest"
-    
-    
-    
     
     type masterData = {
         option : string

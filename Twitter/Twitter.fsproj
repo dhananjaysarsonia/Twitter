@@ -8,14 +8,15 @@
     <ItemGroup>
         <Compile Include="DataTypes.fs" />
         <Compile Include="SQLQueries.fs" />
-        <Compile Include="Server.fs" />
         <Compile Include="Client.fs" />
         <Content Include="JSONDOC.txt" />
         <Compile Include="JsonIO.fs" />
+        <Compile Include="Server.fs" />
     </ItemGroup>
 
     <ItemGroup>
       <PackageReference Include="Akka.FSharp" Version="1.4.12" />
+      <PackageReference Include="Akka.Remote" Version="1.4.12" />
       <PackageReference Include="FSharp.Data" Version="3.3.3" />
       <PackageReference Include="FSharp.Data.JsonProvider" Version="0.5.0" />
       <PackageReference Include="FSharp.Json" Version="0.3.4" />

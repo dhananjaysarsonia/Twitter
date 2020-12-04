@@ -11,22 +11,24 @@ open Twitter.DataTypes.Response
 let createUserTableQuery = "CREATE TABLE user(uid TEXT PRIMARY KEY, " +
                            "password TEXT);"
                            
+                           
+                           
 let createFollowerTable = "CREATE TABLE follows(uid TEXT, " +
-                          "follows TEXT, FOREIGN KEY(follows) REFERENCES user(uid));"
+                          "follows TEXT);"
 
 let createTweetTable = "CREATE TABLE tweet(tweetId TEXT PRIMARY KEY, " +
-                          "tweet TEXT, uid TEXT, flag BOOLEAN, owner TEXT, FOREIGN KEY(uid) REFERENCES user(uid));"                          
+                          "tweet TEXT, uid TEXT, flag BOOLEAN, owner TEXT);"                          
 let createMentionTable = "Create TABLE mention( tweetId TEXT," +
-                         "tweet TEXT,mentionId TEXT, uid TEXT, FOREIGN KEY(mentionId) REFERENCES user(uid));"
-
+                         "tweet TEXT,mentionId TEXT, uid TEXT);"
+                             
 let createHashTagTable = "Create TABLE hashtag_master(hashtag TEXT PRIMARY KEY);"
                           
 let createHashTagTweetTable = "Create TABLE hashtag(hashtag TEXT, "+
-                              "uid TEXT,tweetId TEXT, tweet TEXT,FOREIGN KEY(tweetId) REFERENCES tweet(tweetId), FOREIGN KEY(hashtag) REFERENCES hashtag_master(hashtag))"
+                              "uid TEXT,tweetId TEXT, tweet TEXT)"
 
 
 let feedTable = "Create TABLE feed(uid TEXT, "+
-                              "tweetId TEXT, owner TEXT, flag BOOLEAN, origOwner TEXT, timestamp DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(uid) REFERENCES user(uid), FOREIGN KEY(tweetId) REFERENCES tweet(tweetId), FOREIGN KEY(owner) REFERENCES user(uid))"
+                              "tweetId TEXT, tweet TEXT, owner TEXT, flag BOOLEAN, origOwner TEXT, timestamp DEFAULT CURRENT_TIMESTAMP)"
 
 
 
@@ -34,6 +36,7 @@ let dbAddNewUser (userId: string) (password : string) (connection : SQLiteConnec
     connection.Open()
     let sql =  "INSERT INTO user (uid, password) VALUES (@uid, @password)" 
     let command = new SQLiteCommand(sql, connection)
+    
     command.Parameters.AddWithValue("@uid", userId) |> ignore
     command.Parameters.AddWithValue("@password", password) |> ignore
 
@@ -42,7 +45,7 @@ let dbAddNewUser (userId: string) (password : string) (connection : SQLiteConnec
 
 let dbInsertTweet (tweetId : string) (tweet : string) (uid : string) (flag : bool) (owner : string) (connection : SQLiteConnection) =
     //connection.Open()
-    let sql =  "INSERT INTO tweet (tweetId, tweet, uid) VALUES (@tweetId, @tweet, @uid, @flag, @owner)" 
+    let sql =  "INSERT INTO tweet (tweetId, tweet, uid, flag, owner) VALUES (@tweetId, @tweet, @uid, @flag, @owner)" 
     let command = new SQLiteCommand(sql, connection)
     command.Parameters.AddWithValue("@tweetId", tweetId) |> ignore
     command.Parameters.AddWithValue("@tweet", tweet) |> ignore
@@ -79,7 +82,7 @@ let dbInsertMention(tweetId : string) (tweet : string) (mentionId : string) (uid
     
 let dbInsertHashTag (hashtag : string)(connection : SQLiteConnection) =
    // connection.Open()
-    let sql = "INSERT INTO hashtag_master(id, hashtag) VALUES(@id, @hashtag)"
+    let sql = "INSERT INTO hashtag_master(hashtag) VALUES(@hashtag)"
     let command = new SQLiteCommand(sql, connection)    
     command.Parameters.AddWithValue("@hashtag", hashtag) |> ignore 
     command.ExecuteNonQuery() |> ignore
@@ -196,7 +199,7 @@ let dbGetMentionsOfUser (uid : string) (connection : SQLiteConnection) =
         let row : mention = {
             userId = reader.["mentionId"].ToString()
             tweetOwner = reader.["uid"].ToString()
-            tweetId = reader.["uid"].ToString()
+            tweetId = reader.["tweetId"].ToString()
             tweet = reader.["tweet"].ToString()
         }
         
