@@ -33,7 +33,7 @@ open Twitter.Client
 open Twitter.DataTypes.simulator
 
 
-
+//let serverSetup = 
 
 let databaseFilename = "/Users/dhananjaysarsonia/RiderProjects/Twitter/Twitter/tweeeeterdb"
 SQLiteConnection.CreateFile(databaseFilename) 
@@ -45,33 +45,7 @@ let connectionStringMemory =  sprintf "Data Source=%s;Version=3;" databaseFilena
 let connection = new SQLiteConnection(connectionStringMemory)
 //table creation logic 
 connection.Open()
-//printf "jere"
-//let userSql = "
-//        CREATE TABLE IF NOT EXISTS user(
-//            userId VARCHAR(128) PRIMARY KEY,
-//            username VARCHAR(128) UNIQUE,
-//            password VARCHAR(128),
-//            created DATETIME,
-//            updated DATETIME
-//        );"
-//
-//let command = new SQLiteCommand(userSql, connection)
-//command.ExecuteNonQuery() |> ignore
-//connection.Close()
 
-
-
-
-
-//create user table
-//let sql = "
-//        CREATE TABLE IF NOT EXISTS user(
-//            userId VARCHAR(128) PRIMARY KEY,
-//            username VARCHAR(128) UNIQUE,
-//            password VARCHAR(128),
-//            created DATETIME,
-//            updated DATETIME
-//        );"
 let command = new SQLiteCommand (SQLQueries.createUserTableQuery, connection)
 command.ExecuteNonQuery() |> ignore
 //create follower table
@@ -267,6 +241,33 @@ let followActor(mailBox : Actor<_>) =
     loop()
     
 let FollowActor = spawn serverSystem "FOLLOW_ACTOR" followActor
+
+    
+    
+
+let followMassActor(mailBox : Actor<_>) =
+    let rec loop() = actor{
+        let! message = mailBox.Receive ()
+        match message with
+        | Init ->
+            printf "Felt Cute, might remove later"
+        | ServerDataWrapper.Request(data, actorRef) ->
+            let res = Json.deserialize<DataTypes.simulator.followBulkData> data
+            let connection = new SQLiteConnection(connectionStringMemory)
+            connection.Open()
+            for rowData in res.followList do
+                SQLQueries.dbInsertFollow res.uid (string <| rowData) connection
+            
+            
+            connection.Close()
+            responseSend actorRef DataTypes.Response.types.followResponse "OK"
+            
+        return! loop()
+    }
+    loop()
+    
+let FollowMassActor = spawn serverSystem "FOLLOW_MASS_ACTOR" followMassActor
+    
 //search actor have types
     //search hashtags
     //search tweets with mymentions
@@ -361,6 +362,11 @@ let serverActor(mailBox : Actor<_>) =
             let data  = ServerDataWrapper.Request(reqData.data, mailBox.Context.Sender)
             printf "follow"
             FollowActor <! data
+            
+        | DataTypes.Request.types.followBulkRequest ->
+            let data  = ServerDataWrapper.Request(reqData.data, mailBox.Context.Sender)
+            printf "follow"
+            FollowMassActor <! data
         | Request.types.feedRequest ->
             let data  = ServerDataWrapper.Request(reqData.data, mailBox.Context.Sender)
             FeedActor <! reqData.data
@@ -447,20 +453,20 @@ let getFeed uid =
         data = Json.serialize req
     }
     Json.serialize data
-    
-let user1 = spawn clientSystem "1" Client.clientActor
-let user2 = spawn clientSystem "2" Client.clientActor
-
-user1 <! createUserSimu "1" "123"
-user2 <! createUserSimu "2" "123"
-Thread.Sleep(1000)
-user1 <! loginSimu "1"
-user2 <! loginSimu "2"
-Thread.Sleep(1000)
-user1 <! tweetSimu "First Tweet" "1"
-user2 <! tweetSimu "Second Tweet @1" "2"
-
-System.Console.ReadLine() |> ignore
+//    
+//let user1 = spawn clientSystem "1" Client.clientActor
+//let user2 = spawn clientSystem "2" Client.clientActor
+//
+//user1 <! createUserSimu "1" "123"
+//user2 <! createUserSimu "2" "123"
+//Thread.Sleep(1000)
+//user1 <! loginSimu "1"
+//user2 <! loginSimu "2"
+//Thread.Sleep(1000)
+//user1 <! tweetSimu "First Tweet" "1"
+//user2 <! tweetSimu "Second Tweet @1" "2"
+//
+//System.Console.ReadLine() |> ignore
 
 
 //let's create user table

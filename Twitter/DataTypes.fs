@@ -137,10 +137,16 @@ module Request =
         let registerRequest : string = "registerRequest"
         [<Literal>]
         let loginRequest = "loginRequest"
+        
+        [<Literal>]
+        let loginRequestBulk = "loginRequestBulk"
         [<Literal>]
         let logoutRequest = "logoutRequest"
         [<Literal>]
         let followRequest = "followRequest"
+        
+        [<Literal>]
+        let followBulkRequest = "followBulkRequest"
         [<Literal>]
         let searchRequest = "searchRequest"
     
@@ -169,6 +175,12 @@ module Request =
     type loginRequest = {
         uid : string
         password : string
+    }
+    
+    type loginWithActionsRequest = {
+        uid : string
+        password : string
+        actionList : list<string>
     }
     
     type followRequest = {
@@ -225,3 +237,9 @@ module simulator =
         tweet : string
         uid : string
     }
+    type followBulkData = {
+        uid : string
+        followList : list<int>
+    }
+    
+//    { uid = string i ; follow_list = follower_list}

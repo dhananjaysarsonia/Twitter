@@ -109,6 +109,16 @@ let dbInsertFollow (fromId : string) (toId : string) (connection : SQLiteConnect
     connection.Close ()
     
 
+let dbInsertFollowBulk (fromId : string) (toId : string) (connection : SQLiteConnection) =
+//    connection.Open()
+    let sql = "INSERT INTO follows(uid, follows) VALUES( @fromId, @toId)"
+    let command = new SQLiteCommand(sql, connection)
+    command.Parameters.AddWithValue("@fromId", fromId) |> ignore
+    command.Parameters.AddWithValue("@toId", toId) |> ignore
+    command.ExecuteNonQuery () |> ignore
+//    connection.Close ()
+
+
 
 let dbGetTweetFotTweetIdWithConnectionOpen (tweetId : string) (connection : SQLiteConnection) =
     let mutable tweets : list<tweet> = []

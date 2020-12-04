@@ -1,12 +1,14 @@
 module Twitter.Client
 
 open System.Collections.Generic
+open System.ComponentModel.DataAnnotations
 open System.Data.SQLite
 open Akka.Actor
 open FSharp.Data.JsonProvider
 open FSharp.Json
 open Twitter
 open Twitter.DataTypes
+open Twitter.DataTypes.Request
 open Twitter.DataTypes.Request
 open Twitter.DataTypes.Request
 open Twitter.DataTypes.Request
@@ -36,7 +38,12 @@ let sendRequest option data =
     }
     server <! Json.serialize req
 
-
+let reqMaker option data =
+    let req : DataTypes.Request.masterData = {
+        option = option
+        data = data
+    }
+    Json.serialize req
 
 //making empty feed for initialization
 let nullFeedList : list<DataTypes.Response.feed_row> = []
@@ -69,6 +76,37 @@ let clientActor(mailBox : Actor<_>) =
             uid <- req.uid
             sendRequest DataTypes.Request.types.registerRequest masterData.data
             
+        |DataTypes.Request.types.loginRequestBulk ->
+            let req = Json.deserialize<DataTypes.Request.loginWithActionsRequest> masterData.data
+            uid <- req.uid
+            for action in req.actionList do
+                let desAction = Json.deserialize<DataTypes.simulator.master> action
+                match desAction.option with
+                | DataTypes.Request.types.submitTweetRequest ->
+                    let rawTweet = desAction.data
+                    let tweet : DataTypes.simulator.tweetData = {
+                        uid = uid
+                        tweet = rawTweet
+                    }
+                    mailBox.Self <! reqMaker DataTypes.Request.types.submitTweetRequest (Json.serialize tweet) 
+                | DataTypes.Request.types.submitReTweetRequest ->
+                    mailBox.Self <! action
+                | DataTypes.Request.types.mentionRequest ->
+                    let data : DataTypes.Request.searchMyMentionRequest = {
+                        uid = uid
+                    }
+                    mailBox.Self <! reqMaker DataTypes.Request.types.mentionRequest (Json.serialize data)
+                | DataTypes.Request.types.hashTagTweetRequest ->
+                    let tag = desAction.data
+                    let data : DataTypes.Request.searchTweetWithHashTagRequest = {
+                        uid = uid
+                        hashtag = tag
+                    }
+                    mailBox.Self <! reqMaker DataTypes.Request.types.hashTagTweetRequest (Json.serialize data)
+                | _ ->
+                    printf "Some unexpected error occurred"
+                    
+        
             
         | DataTypes.Request.types.loginRequest ->
             let req = Json.deserialize<DataTypes.Request.loginRequest> masterData.data
@@ -103,19 +141,62 @@ let clientActor(mailBox : Actor<_>) =
              
             
         | DataTypes.Request.types.submitReTweetRequest  ->
-            printf ""
-        
+            let feedData = feed.rows
+            
+            if feedData.Length <> 0 then
+                let random = new System.Random()
+                let index = random.Next(0, feedData.Length)
+                let row = feedData.[index]
+                
+                let tweetData : DataTypes.Request.tweetSubmitRequest = {
+                    tweetId = ""
+                    tweet = row.tweet.tweet
+                    isRetweet = true
+                    uid = uid
+                    mentions = [||]
+                    hashtags = [||]
+                    origOwner = row.uid
+                    
+                }
+                sendRequest DataTypes.Request.types.submitReTweetRequest (Json.serialize tweetData)
+                
+               
+                
+                 
         
         | DataTypes.Request.types.followRequest ->
-            printf ""
+            sendRequest DataTypes.Request.types.followRequest masterData.data
+            
+//            let followData = Json.deserialize<DataTypes.Request.followRequest> masterData.data
+
+            
             
         | DataTypes.Request.types.feedRequest ->
-            printf "%s" masterData.data
+            let reqData : DataTypes.Request.feedRequest = {
+                uid = uid
+            }
+            sendRequest DataTypes.Request.types.feedRequest (Json.serialize reqData)
 
-        | DataTypes.Request.types.searchRequest ->
+        | DataTypes.Request.types.hashTagTweetRequest ->
+            //search for hashtag
+            let hashtag = Json.deserialize<DataTypes.Request.searchTweetWithHashTagRequest> masterData.data
+            let searchMaster : DataTypes.Request.searchMaster = {
+                option = DataTypes.Request.types.hashTagTweetRequest
+                data = masterData.data
+            }
+            
+            sendRequest DataTypes.Request.types.searchRequest (Json.serialize searchMaster)
+            
+            
             printf ""
         | DataTypes.Request.types.mentionRequest ->
-            printf ""
+            let hashtag = Json.deserialize<DataTypes.Request.searchMyMentionRequest> masterData.data
+            let searchMaster : DataTypes.Request.searchMaster = {
+                option = DataTypes.Request.types.mentionRequest
+                data = masterData.data
+            }
+            sendRequest DataTypes.Request.types.searchRequest (Json.serialize searchMaster)
+            
             
       
         //responses
