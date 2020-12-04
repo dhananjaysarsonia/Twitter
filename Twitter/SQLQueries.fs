@@ -27,7 +27,7 @@ let createHashTagTweetTable = "Create TABLE hashtag(hashtag TEXT, "+
 
 
 let feedTable = "Create TABLE feed(uid TEXT, "+
-                              "tweetId TEXT, tweet TEXT, owner TEXT, flag BOOLEAN, origOwner TEXT, timestamp DEFAULT CURRENT_TIMESTAMP)"
+                              "tweetId TEXT, tweet TEXT, owner TEXT, flag BOOLEAN, origOwner TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)"
 
 
 
@@ -43,7 +43,7 @@ let dbAddNewUser (userId: string) (password : string) (connection : SQLiteConnec
     connection.Close()
 
 let dbInsertTweet (tweetId : string) (tweet : string) (uid : string) (flag : bool) (owner : string) (connection : SQLiteConnection) =
-    //connection.Open()
+    connection.Open()
     let sql =  "INSERT INTO tweet (tweetId, tweet, uid, flag, owner) VALUES (@tweetId, @tweet, @uid, @flag, @owner)" 
     let command = new SQLiteCommand(sql, connection)
     command.Parameters.AddWithValue("@tweetId", tweetId) |> ignore
@@ -52,11 +52,11 @@ let dbInsertTweet (tweetId : string) (tweet : string) (uid : string) (flag : boo
     command.Parameters.AddWithValue("@flag", flag) |> ignore
     command.Parameters.AddWithValue("@owner", owner) |> ignore
     command.ExecuteNonQuery() |> ignore
-    //connection.Close()
+    connection.Close()
     
 let dbInsertFeed (uid : string) (tweetId: string) (tweet : string) (owner : string) (flag : bool) (origOwner : string)(connection : SQLiteConnection) =
-//    connection.Open()
-    let sql =  "INSERT INTO feed(uid, tweetId, tweet, owner, flag, origOwner, time) VALUES(@uid, @tweetId, @tweet, @owner, 'NULL')" 
+    connection.Open()
+    let sql =  "INSERT INTO feed(uid, tweetId, tweet, owner, flag, origOwner) VALUES(@uid, @tweetId, @tweet, @owner, @flag, @origOwner)" 
     let command = new SQLiteCommand(sql, connection)
     command.Parameters.AddWithValue("@uid", uid) |> ignore
     command.Parameters.AddWithValue("@tweetId", tweetId) |> ignore
@@ -66,10 +66,10 @@ let dbInsertFeed (uid : string) (tweetId: string) (tweet : string) (owner : stri
     command.Parameters.AddWithValue("@origOwner", origOwner) |> ignore
 
     command.ExecuteNonQuery() |> ignore
-    //connection.Close()
+    connection.Close()
     
 let dbInsertMention(tweetId : string) (tweet : string) (mentionId : string) (uid : string) (connection : SQLiteConnection) =
-   // connection.Open()
+    connection.Open()
     let sql = "INSERT INTO mention(tweetId, tweet, mentionId, uid) VALUES(@tweetId, @tweet, @mentionId, @uid)"
     let command = new SQLiteCommand(sql, connection)
     command.Parameters.AddWithValue("@tweetId", tweetId) |> ignore
@@ -77,19 +77,23 @@ let dbInsertMention(tweetId : string) (tweet : string) (mentionId : string) (uid
     command.Parameters.AddWithValue("@mentionId", mentionId) |> ignore
     command.Parameters.AddWithValue("@uid", uid) |> ignore //owner of the tweet
     command.ExecuteNonQuery() |> ignore
-  //  connection.Close()
+    connection.Close()
     
 let dbInsertHashTag (hashtag : string)(connection : SQLiteConnection) =
-   // connection.Open()
-    let sql = "INSERT INTO hashtag_master(hashtag) VALUES(@hashtag)"
-    let command = new SQLiteCommand(sql, connection)    
-    command.Parameters.AddWithValue("@hashtag", hashtag) |> ignore 
-    command.ExecuteNonQuery() |> ignore
-  //  connection.Close()
+    connection.Open()
+    try
+        
+        let sql = "INSERT INTO hashtag_master(hashtag) VALUES(@hashtag)"
+        let command = new SQLiteCommand(sql, connection)    
+        command.Parameters.AddWithValue("@hashtag", hashtag) |> ignore 
+        command.ExecuteNonQuery() |> ignore
+    with
+    | _ -> printf ""
+    connection.Close()
     
 let dbInsertHashTagForTweet (hashtag : string) (uid : string) (tweetId : string) (tweet : string)(connection : SQLiteConnection) =
     connection.Open()
-    let sql = "INSERT INTO hashtag(hashtag, uid, tweetId, tweet) VALUES(@id, @hashtag)"
+    let sql = "INSERT INTO hashtag(hashtag, uid, tweetId, tweet) VALUES(@hashtag, @uid, @tweetId, @tweet)"
     let command = new SQLiteCommand(sql, connection)
     command.Parameters.AddWithValue("@hashtag", hashtag) |> ignore
     command.Parameters.AddWithValue("@uid", uid) |> ignore

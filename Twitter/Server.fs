@@ -19,6 +19,7 @@ module Twitter.Server
 
 //
 
+open System
 open System.Collections.Generic
 open System.Data.SQLite
 open System.Threading
@@ -35,7 +36,8 @@ open Twitter.DataTypes.simulator
 
 //let serverSetup = 
 
-let databaseFilename = "/Users/dhananjaysarsonia/RiderProjects/Twitter/Twitter/tweeeeterdb"
+//let databaseFilename = "/Users/dhananjaysarsonia/RiderProjects/Twitter/Twitter/tweeeeterdb"
+let databaseFilename = "tweeeeterdb"
 SQLiteConnection.CreateFile(databaseFilename) 
 
 //let connectionString =  sprintf "Data Source=%s;Version=3;" "sqliteFile.sqlite"
@@ -153,13 +155,13 @@ let updateFeedsActor(mailBox : Actor<_>) =
             let tweet = Json.deserialize<Request.tweetSubmitRequest> data
             let connection = new SQLiteConnection(connectionStringMemory)
             let followers = SQLQueries.dbGetUserFollowers tweet.uid connection
-            connection.Open()
+            //connection.Open()
             for i in followers.rows do
                 SQLQueries.dbInsertFeed i.userId tweet.tweetId tweet.tweet tweet.uid tweet.isRetweet tweet.origOwner connection
                 if liveActorMap.ContainsKey i.userId then
                     responseSend (liveActorMap.Item(i.userId))  (DataTypes.Response.types.sendTweetInFeed)  (Json.serialize tweet)
             
-            connection.Close()
+           // connection.Close()
             
             responseSend actorRef DataTypes.Response.types.sendTweetResponse "OK"
             
@@ -182,19 +184,20 @@ let tweetActor(mailBox : Actor<_>) =
             let tweet = Json.deserialize<Request.tweetSubmitRequest> data
             let connection = new SQLiteConnection(connectionStringMemory)    
             //check if it's a retweet
-            let timestamp = System.DateTime.Now.ToString()
+            let timestamp = string <| Guid.NewGuid()
             let tweetIdGen = tweet.uid + timestamp
-            connection.Open()
+            //connection.Open()
             SQLQueries.dbInsertTweet tweetIdGen tweet.tweet tweet.uid tweet.isRetweet tweet.origOwner connection
             
             //if not a retweet we need to put mentions and hash tags
             if not tweet.isRetweet then
                 for hashtag in tweet.hashtags do
                     SQLQueries.dbInsertHashTag hashtag connection
+                    SQLQueries.dbInsertHashTagForTweet hashtag tweet.uid tweet.tweetId tweet.tweet connection
                 for mention in tweet.mentions do
                     SQLQueries.dbInsertMention tweetIdGen tweet.tweet mention tweet.uid connection
                 
-            connection.Close()
+          //  connection.Close()
             
  
 //********************************  call feed actor here
@@ -210,7 +213,9 @@ let tweetActor(mailBox : Actor<_>) =
                 
             }
             
-            FeedActor <! ServerDataWrapper.Request((Json.serialize tweetForFeed), actorRef)
+            UpdateFeedActor <! ServerDataWrapper.Request((Json.serialize tweetForFeed), actorRef)
+            responseSend actorRef DataTypes.Response.types.sendTweetResponse "OK"
+
             
 
     
@@ -248,19 +253,22 @@ let FollowActor = spawn serverSystem "FOLLOW_ACTOR" followActor
 let followMassActor(mailBox : Actor<_>) =
     let rec loop() = actor{
         let! message = mailBox.Receive ()
+//        printf "*********************Heree*************************** \n"
+//        printf "%A" message
         match message with
         | Init ->
             printf "Felt Cute, might remove later"
         | ServerDataWrapper.Request(data, actorRef) ->
             let res = Json.deserialize<DataTypes.simulator.followBulkData> data
             let connection = new SQLiteConnection(connectionStringMemory)
-            connection.Open()
+           // connection.Open()
             for rowData in res.followList do
                 SQLQueries.dbInsertFollow res.uid (string <| rowData) connection
             
             
-            connection.Close()
+            //connection.Close()
             responseSend actorRef DataTypes.Response.types.followResponse "OK"
+            
             
         return! loop()
     }
@@ -284,36 +292,40 @@ let searchActor(mailBox : Actor<_>) =
         | Init ->
             printf "init"
         | ServerDataWrapper.Request (data, actorRef) ->
+//            printf "REACHED IN SEARCH ACTOR****************************** \n \n \n"
             let searchMaster = Json.deserialize<Request.searchMaster> data
+          //  printf "%s" searchMaster.data
+               
             match searchMaster.option with
             | Request.myMentionSearch ->
                 let data = Json.deserialize<Request.searchMyMentionRequest> searchMaster.data
                 let connection = new SQLiteConnection(connectionStringMemory)
                 let res = SQLQueries.dbGetMentionsOfUser data.uid connection
                 responseSend actorRef DataTypes.Response.types.mentionResponse (Json.serialize res)
-                printf "mentionSearchCalled"
+          //      printf "mentionSearchCalled"
             
-            | Request.allHashtagSearch ->
-                let data = Json.deserialize<Request.searchAllHashTags> searchMaster.data
-                let connection = new SQLiteConnection(connectionStringMemory)
-                let res = SQLQueries.dbGetAllHashTag connection
-                responseSend actorRef DataTypes.Response.types.allHashTagSearchResponse (Json.serialize res)
-                
-                
-            | Request.userSearch ->
-                let data = Json.deserialize<Request.searchAllUsers> searchMaster.data
-                let connection = new SQLiteConnection(connectionStringMemory)
-                let res = SQLQueries.dbGetAllUsers connection
-                responseSend actorRef DataTypes.Response.types.allUserInfoResponse (Json.serialize res)
+//            | Request.allHashtagSearch ->
+//                let data = Json.deserialize<Request.searchAllHashTags> searchMaster.data
+//                let connection = new SQLiteConnection(connectionStringMemory)
+//                let res = SQLQueries.dbGetAllHashTag connection
+//                responseSend actorRef DataTypes.Response.types.allHashTagSearchResponse (Json.serialize res)
+//                
+//                
+//            | Request.userSearch ->
+//                let data = Json.deserialize<Request.searchAllUsers> searchMaster.data
+//                let connection = new SQLiteConnection(connectionStringMemory)
+//                let res = SQLQueries.dbGetAllUsers connection
+//                responseSend actorRef DataTypes.Response.types.allUserInfoResponse (Json.serialize res)
                 
             | Request.tweetWithHashTagSearch ->
                 let data = Json.deserialize<Request.searchTweetWithHashTagRequest> searchMaster.data
                 let connection = new SQLiteConnection(connectionStringMemory)
+                
                 let res = SQLQueries.dbGetTweetWithTag data.hashtag connection
                 responseSend actorRef DataTypes.Response.types.hashTagTweetsResponse (Json.serialize res)
                 
             | _ ->
-                printf "someError"
+                printf "someError \n"
         
         
         
@@ -321,31 +333,31 @@ let searchActor(mailBox : Actor<_>) =
     }
     loop()
     
-let SearchActor = spawn serverSystem "SEARCH_ACTOR" followActor
+let SearchActor = spawn serverSystem "SEARCH_ACTOR" searchActor
 
 let serverActor(mailBox : Actor<_>) =
     let rec loop() = actor{
         let! message = mailBox.Receive ()
         let reqData = Json.deserialize<Request.masterData> message
-        printf "%s" reqData.data
+       // printf "%s" reqData.data
         match reqData.option with
         | Request.types.registerRequest ->
             //register user here
-            printf "registering user here"
+           // printf "registering user here"
             let data  = ServerDataWrapper.Request(reqData.data, mailBox.Context.Sender)
             
             RegistrationActor <! data
             
             
         | Request.types.loginRequest ->
-            printf "login"
+          //  printf "login"
             let loginData = Json.deserialize<Request.loginRequest> reqData.data
             liveActorMap.Add(loginData.uid, mailBox.Context.Sender)
             responseSend mailBox.Context.Sender DataTypes.Response.types.loginResponse "loggedIn"
             
             
         | Request.types.logoutRequest ->
-            printf "logout"
+          //  printf "logout"
             let logoutData = Json.deserialize<Request.logoutRequest> reqData.data
             liveActorMap.Remove(logoutData.uid) |> ignore
             
@@ -360,12 +372,12 @@ let serverActor(mailBox : Actor<_>) =
             
         | Request.types.followRequest ->
             let data  = ServerDataWrapper.Request(reqData.data, mailBox.Context.Sender)
-            printf "follow"
+         //   printf "follow"
             FollowActor <! data
             
         | DataTypes.Request.types.followBulkRequest ->
             let data  = ServerDataWrapper.Request(reqData.data, mailBox.Context.Sender)
-            printf "follow"
+        //    printf "follow"
             FollowMassActor <! data
         | Request.types.feedRequest ->
             let data  = ServerDataWrapper.Request(reqData.data, mailBox.Context.Sender)
@@ -373,7 +385,9 @@ let serverActor(mailBox : Actor<_>) =
         
         | Request.types.searchRequest ->
             let data  = ServerDataWrapper.Request(reqData.data, mailBox.Context.Sender)
-            printf "search" // can be of multiple types
+//            printf "*****************SEARCH*****************************"
+//            printf "SEARCH DATA %s \n" reqData.data
+            //printf "search" // can be of multiple types
             SearchActor <! data
         
         | _ ->

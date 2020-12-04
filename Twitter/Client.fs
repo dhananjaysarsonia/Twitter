@@ -64,7 +64,9 @@ let parseTweet (tweet:string) =
             ( List.toArray(hashtags),mentions |> List.toArray)
 
 let clientActor(mailBox : Actor<_>) =
-    let mutable uid = ""
+    let mutable uid : string = ""
+    let mutable count = 0
+    let mutable simuActor = mailBox.Context.Self
     let mutable feed: DataTypes.Response.feeds = nullFeed 
     let rec loop() = actor{
         let! message = mailBox.Receive()
@@ -73,12 +75,14 @@ let clientActor(mailBox : Actor<_>) =
         match masterData.option with
         | DataTypes.Request.types.registerRequest ->
             let req = Json.deserialize<DataTypes.Request.registerRequest> masterData.data
-            uid <- req.uid
+            simuActor <- mailBox.Context.Sender
+            uid <- string <| req.uid
             sendRequest DataTypes.Request.types.registerRequest masterData.data
             
         |DataTypes.Request.types.loginRequestBulk ->
             let req = Json.deserialize<DataTypes.Request.loginWithActionsRequest> masterData.data
             uid <- req.uid
+            count <- req.actionList.Length
             for action in req.actionList do
                 let desAction = Json.deserialize<DataTypes.simulator.master> action
                 match desAction.option with
@@ -105,6 +109,9 @@ let clientActor(mailBox : Actor<_>) =
                     mailBox.Self <! reqMaker DataTypes.Request.types.hashTagTweetRequest (Json.serialize data)
                 | _ ->
                     printf "Some unexpected error occurred"
+                
+                    
+                
                     
         
             
@@ -167,6 +174,8 @@ let clientActor(mailBox : Actor<_>) =
         | DataTypes.Request.types.followRequest ->
             sendRequest DataTypes.Request.types.followRequest masterData.data
             
+        | DataTypes.Request.types.followBulkRequest ->
+            sendRequest DataTypes.Request.types.followBulkRequest masterData.data
 //            let followData = Json.deserialize<DataTypes.Request.followRequest> masterData.data
 
             
@@ -181,8 +190,8 @@ let clientActor(mailBox : Actor<_>) =
             //search for hashtag
             let hashtag = Json.deserialize<DataTypes.Request.searchTweetWithHashTagRequest> masterData.data
             let searchMaster : DataTypes.Request.searchMaster = {
-                option = DataTypes.Request.types.hashTagTweetRequest
-                data = masterData.data
+                option = DataTypes.Request.tweetWithHashTagSearch
+                data = string <| masterData.data
             }
             
             sendRequest DataTypes.Request.types.searchRequest (Json.serialize searchMaster)
@@ -192,8 +201,8 @@ let clientActor(mailBox : Actor<_>) =
         | DataTypes.Request.types.mentionRequest ->
             let hashtag = Json.deserialize<DataTypes.Request.searchMyMentionRequest> masterData.data
             let searchMaster : DataTypes.Request.searchMaster = {
-                option = DataTypes.Request.types.mentionRequest
-                data = masterData.data
+                option = DataTypes.Request.myMentionSearch
+                data = string <| masterData.data
             }
             sendRequest DataTypes.Request.types.searchRequest (Json.serialize searchMaster)
             
@@ -204,42 +213,93 @@ let clientActor(mailBox : Actor<_>) =
         
         
         |DataTypes.Response.types.registerResponse ->
-            printf "Register response: %s" masterData.data
+            count <- count - 1
+            if count <= 0 then
+                mailBox.Self <! reqMaker DataTypes.DONEString " "
+            printf ""
+            
+            //printf "Register response: %s" masterData.data
             
         |DataTypes.Response.types.loginResponse ->
-            printf "Login Response: %s" masterData.data
+//            printf "Login Response: %s" masterData.data
+            count <- count - 1
+            if count <= 0 then
+                mailBox.Self <! reqMaker DataTypes.DONEString " "
+
+            printf ""
         
         |DataTypes.Response.types.sendTweetResponse ->
-            printf "Send Tweet response: %s" masterData.data
+//            printf "Send Tweet response: %s" masterData.data
+            printf ""
+            count <- count - 1
+            if count <= 0 then
+                mailBox.Self <! reqMaker DataTypes.DONEString " "
             
         |DataTypes.Response.types.followersResponse ->
-            printf "get followers response %s" masterData.data
+//            printf "get followers response %s" masterData.data
+            printf ""
+//            count <- count - 1
+//            if count <= 0 then
+//                mailBox.Self <! reqMaker DataTypes.DONEString " "
             
         |DataTypes.Response.types.followResponse ->
-            printf "follow response: %s" masterData.data
+//            printf "follow response: %s" masterData.data
+            printf ""
+//            count <- count - 1
+//            if count <= 0 then
+//                mailBox.Self <! reqMaker DataTypes.DONEString " "
             
         |DataTypes.Response.types.feedResponse ->
             let resData = Json.deserialize<DataTypes.Response.feeds> masterData.data
             
             feed <- resData
-            printf "Feed Response : %s" masterData.data
+//            printf "Feed Response : %s" masterData.data
+            printf ""
            
             
         |DataTypes.Response.types.sendTweetInFeed ->
+//            count <- count - 1
+//            if count <= 0 then
+//                mailBox.Self <! reqMaker DataTypes.DONEString " "
             
-            printf "Dynamic feed update feed update for liveActor : %s" masterData.data
+//            printf "Dynamic feed update feed update for liveActor : %s" masterData.data
+            printf ""
             
         |DataTypes.Response.types.hashTagTweetsResponse ->
-            printf "tweet with hashtag search response: %s" masterData.data
+            //printf "******************tweet with HASHTAG search response: %s \n" masterData.data
+            count <- count - 1
+            if count <= 0 then
+                mailBox.Self <! reqMaker DataTypes.DONEString " "
+
+            printf ""
         
         |DataTypes.Response.types.allHashTagSearchResponse ->
-            printf "all hashtag response %s" masterData.data
+            printf ""
+            count <- count - 1
+            if count <= 0 then
+                mailBox.Self <! reqMaker DataTypes.DONEString " "
+            
+//            printf "///////////////////////////////////all hashtag response %s" masterData.data
+
             
         |DataTypes.Response.types.mentionResponse ->
-            printf "mention response %s" masterData.data
+            printf ""
+            count <- count - 1
+            if count <= 0 then
+                mailBox.Self <! reqMaker DataTypes.DONEString " "
+            
+//            printf "//////////////////////////////mention response %s" masterData.data
+            
+        |DataTypes.DONEString ->
+            let data = DataTypes.Message.LogoutDone(uid)
+            simuActor <! data
+            
             
         | _ ->
-            printf "error"
+            count <- count - 1
+            if count <= 0 then
+                mailBox.Self <! reqMaker DataTypes.DONEString " "
+            printf "error \n"
         
         return! loop()
     }

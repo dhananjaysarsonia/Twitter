@@ -24,21 +24,17 @@ open Server
 //let args = fsi.CommandLineArgs
 //let totalUsers = System.Int32.Parse(args.[1])
 Server.serverStarter |> ignore
-let totalUsers = 100
+let totalUsers = 1000
 let mutable number_login = 50 * totalUsers / 100
     
 let system = System.create "system" (Configuration.defaultConfig())
 
-type Message =
-    | Start
-    | BeginSimulation
-    | LogoutDone of string
-    | Done
+
 
 let containsNumber number list = List.exists (fun elem -> elem = number) list 
 let random = new System.Random()
-let active_state = Array.zeroCreate totalUsers
-let activity_count = Array.zeroCreate totalUsers
+let active_state = Array.zeroCreate (totalUsers + 1)
+let activity_count = Array.zeroCreate (totalUsers + 1)
 let mutable logout_count = 0
 let mutable cycle_count = 0
 let mutable activity_daycount =0
@@ -125,7 +121,7 @@ let simulator(mailbox : Actor<_>) =
                     elif i = 2 then
                         
                         //Retweet
-                        let mutable temp = requestBuilder DataTypes.Request.types.submitReTweetRequest ""
+                        let mutable temp = requestBuilder DataTypes.Request.types.submitReTweetRequest "dummy"
                         listofactions <- listofactions @ [temp]
                         
                     else
@@ -133,7 +129,7 @@ let simulator(mailbox : Actor<_>) =
                         // Search 
                         let mutable search_option = random.Next(1,3)
                         if search_option = 1 then
-                            let mutable temp = requestBuilder DataTypes.Request.types.mentionRequest ""
+                            let mutable temp = requestBuilder DataTypes.Request.types.mentionRequest "dummy"
                             listofactions <- listofactions @ [temp]
                             
                         else
@@ -157,7 +153,10 @@ let simulator(mailbox : Actor<_>) =
             activity_daycount <- activity_daycount + activity_count.[user_id]
             active_state.[user_id] <- 0
             let actorRef = actorMap.[uid]
-            actorRef <! requestBuilder DataTypes.Request.types.logoutRequest uid
+            let lReq: Request.logoutRequest = {
+                uid = uid
+            }
+            actorRef <! requestBuilder DataTypes.Request.types.logoutRequest (Json.serialize lReq)
             
             //I will give metric for each actor here
             
@@ -169,12 +168,13 @@ let simulator(mailbox : Actor<_>) =
             
         | Done ->
             cycle_count <- cycle_count+1
+            printf "Cycle count is %i \n" cycle_count
             //Terminate
             timer.Stop()
             printfn "Day %i ends." cycle_count
             printfn "Time taken to process %i requests is %f milliseconds." activity_daycount timer.Elapsed.TotalMilliseconds
-            if cycle_count = 5 then
-                printf "Simulation Complete"
+            if cycle_count = 3 then
+                printf "\n\n\n\n\n\n********************************************************Simulation Complete***************************************** \n \n \n"
                 mailbox.Context.System.Terminate () |> ignore
             
             else

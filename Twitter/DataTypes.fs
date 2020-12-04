@@ -4,6 +4,14 @@ open System.Data.SQLite
 open FSharp.Json
 //open Twitter.DataTypes.Response
 
+type Message =
+    | Start
+    | BeginSimulation
+    | LogoutDone of string
+    | Done
+
+[<Literal>]
+let DONEString = "done"
 module Response =
     module types = 
     //response strings
