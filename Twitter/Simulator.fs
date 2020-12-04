@@ -40,8 +40,9 @@ let active_state = Array.zeroCreate totalUsers
 let activity_count = Array.zeroCreate totalUsers
 let mutable logout_count = 0
 let mutable cycle_count = 0
+let mutable activity_daycount =0
 
-
+let timer = new System.Diagnostics.Stopwatch()
 
 let mutable actorMap = new Dictionary<string, IActorRef>()
 
@@ -95,7 +96,9 @@ let simulator(mailbox : Actor<_>) =
             //Network is built
                 
             //Simulation Begins
-        | BeginSimulation ->    
+        | BeginSimulation ->
+            
+            timer.Start()
             let mutable n = 0
             let mutable data = string n
             for i in 1 .. number_login do    
@@ -150,6 +153,7 @@ let simulator(mailbox : Actor<_>) =
         //when a user finishes its activities it prompts the simulator to logout
         | LogoutDone uid ->
             let user_id = int uid
+            activity_daycount <- activity_daycount + activity_count.[user_id]
             active_state.[user_id] <- 0
             let actorRef = actorMap.[uid]
             actorRef <! requestBuilder DataTypes.Request.types.logoutRequest uid
@@ -165,6 +169,9 @@ let simulator(mailbox : Actor<_>) =
         | Done ->
             cycle_count <- cycle_count+1
             //Terminate
+            timer.Stop()
+            printfn "Day %i ends." cycle_count
+            printfn "Time taken to process %i requests is %f milliseconds." activity_daycount timer.Elapsed.TotalMilliseconds
             if cycle_count = 5 then
                 printf "Simulation Complete"
                 mailbox.Context.System.Terminate () |> ignore
