@@ -29,7 +29,7 @@ let mutable number_login = 50 * totalUsers / 100
     
 let system = System.create "system" (Configuration.defaultConfig())
 
-
+let noDaysToSimulate = 2
 
 let containsNumber number list = List.exists (fun elem -> elem = number) list 
 let random = new System.Random()
@@ -175,7 +175,7 @@ let simulator(mailbox : Actor<_>) =
             printfn "Day %i ends." cycle_count
             printfn "Time taken to process %i requests is %f milliseconds." activity_daycount timer.Elapsed.TotalMilliseconds
             timer.Reset()
-            if cycle_count = 3 then
+            if cycle_count = noDaysToSimulate then
                 printf "\n\n\n\n\n\n********************************************************Simulation Complete***************************************** \n \n \n"
                 mailbox.Context.System.Terminate () |> ignore
             
