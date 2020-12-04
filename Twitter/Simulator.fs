@@ -18,11 +18,12 @@ open FSharp.Json
 open Twitter.DataTypes
 open Client
 open Twitter.DataTypes.Request
+open Server
 
 //Commandline input for .fsx file
 //let args = fsi.CommandLineArgs
 //let totalUsers = System.Int32.Parse(args.[1])
-
+Server.serverStarter |> ignore
 let totalUsers = 100
 let mutable number_login = 50 * totalUsers / 100
     
@@ -65,7 +66,7 @@ let simulator(mailbox : Actor<_>) =
             //Register
             let mutable data = string 1
             for i in 1 .. totalUsers do
-                let actorRef = spawn system (string <| i) clientActor
+                let actorRef = spawn Client.system (string <| i) clientActor
                 actorMap.Add(string <| i, actorRef)
                 let regRequest : DataTypes.Request.registerRequest = {
                     uid = (string <| i)
@@ -184,3 +185,4 @@ let simulator(mailbox : Actor<_>) =
 
 let simulator_actor = spawn system "simulator" simulator
 simulator_actor <! Start
+System.Console.ReadLine() |> ignore

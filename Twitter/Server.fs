@@ -385,8 +385,9 @@ let serverActor(mailBox : Actor<_>) =
 
 
 
+let serverStarter =
+    spawn serverSystem "server" serverActor
 
-let ServerActor = spawn serverSystem "server" serverActor
 
 
 let clientSystem = Client.system
