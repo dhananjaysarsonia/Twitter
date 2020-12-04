@@ -8,8 +8,7 @@ open System.Security.Cryptography
 open Twitter.DataTypes.Response
 
 
-let createUserTableQuery = "CREATE TABLE user(uid TEXT PRIMARY KEY, " +
-                           "password TEXT);"
+let createUserTableQuery = "CREATE TABLE IF NOT EXISTS user(uid VARCHAR(128) PRIMARY KEY, password VARCHAR(128));"
                            
                            
                            
