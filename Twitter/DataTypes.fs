@@ -173,11 +173,12 @@ module Request =
     type loginRequest = {
         uid : string
         password : string
+        actions_list : int list
     }
     
     type followRequest = {
         uid : string
-        follow_id : string
+        follow_list : int list
     }
     
     type tweetSubmitRequest = {
@@ -224,6 +225,7 @@ module simulator =
     type master = {
         option : string
         data : string
+        
     }
     type tweetData = {
         tweet : string

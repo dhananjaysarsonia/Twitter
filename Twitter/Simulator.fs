@@ -14,103 +14,135 @@ open System.Diagnostics
 open Akka.Util
 open System.Threading;
 open FSharp.Data
-open Twitter.DataTypes.simulator
+open FSharp.Json
+open Twitter.DataTypes
 
-let totalUsers = 1000
+let totalUsers = 100
 
 let system = System.create "system" (Configuration.defaultConfig())
 
 type Message =
     | Start
     | BeginProcess
+    | Tweet of string
+    | Retweet of string
+    | Search of string
+    | Logout of string
     | Done
 
-   
+let containsNumber number list = List.exists (fun elem -> elem = number) list 
 let random = new System.Random()
 
 //To track active-inactive states of users
 let active_state = Array.zeroCreate totalUsers
+let activity_count = Array.zeroCreate totalUsers
+let mutable logout_count = 0
+let mutable cycle_count = 0
 
 // Create a list of hashtags
-let hashtag_list = []
+let hashtag_list = ["#1"; "#2"; "#3"; "#4"; "#5"; "#6"; "#7"; "#8"; "#9"; "#10"]
 
 let simulator(mailbox : Actor<_>) =
+    let rec loop() = actor{
         let! message = mailbox.Receive()
         match message with
         | Start ->
             //Register
-            //for i in 1..numUsers do
+            let mutable data = string 1
+            for i in 1 .. totalUsers do
                 //Send client an message to register with uid = i
+                
+                //spawn totalUsers number of actors
+                data <- string i 
+                Client.sendRequest "registerRequest" data
             //All users are registered
-            // Send actions_actor <! BeginProcess
             
-        //| Done ->
-            //Terminate                
-                
-let actions_actor(mailbox : Actor<_>) =
-    let rec loop() = actor{
-        let! message = mailBox.Receive()
-        match message with
-        | BeginProcess ->
-            //Login-Logout
-            //Randomly select 50 actors from inactive state , spawn actors for the 50 users, send login request to client, update state to active
-            //Send a message to begin activities
-            //Each actor, after finishing the activities(count decided by category), receives a message and Logout, change active state and Kill the actor.
-            //Repeat n times and send done message to the simulator.
-            
-        //Actions to be performed after login
-        // 50 active actors will randomly select (1-5) and perform actions (?????)
-        //{
-            // 1-Follow
-            // 1 day/Cycle/Time{
-                //For the 50 actors logged-in, first actor will have 49 followers, second actor will have 25 actors,so on
-                // user1 - n-1 - 49
-                // user2 - n/2 - 25
-                // user3 - n/3 - 17
-                // user4 - n/4 - 13
-                // user5 - n/5 - 10 ..... user35 - n/35 - 1 ...user50 - n/50- 1 followers
-            //}            
-            
-            // 2-Tweet
-                // 1 day/Cycle/Time{
-                    // For 50 actors logged-in , first actor will do 25 tweets, second actor will do 17 tweets,so on
-                    // user1 - n/2 - 25
-                    // user2 - n/3 - 17
-                    // user3 - n/4 - 13
-                    // user4 - n/5 - 10 ..... user35 - n/35 - 1 ...user50 - n/50- 1 tweet
-                
-                    //Tweet Request - " Blah Blah Blah @user_id Blah Blah Blah Blah #hashtag #hashtag" where user_id is randomly selected from numUsers and hashtag is randomly selected from hashtags_list
-                //}
-                
-            // 3-Retweet
-                 // 1 day/Cycle/Time{
-                    // For 50 actors logged-in , first actor will do 25 retweets, second actor will do 17 retweets,so on
-                    // user1 - n/2 - 25
-                    // user2 - n/3 - 17
-                    // user3 - n/4 - 13
-                    // user4 - n/5 - 10 ..... user35 - n/35 - 1 ...user50 - n/50- 1 retweet
-                
-                    //Retweet_id randomly selected from tweet_ids(????)
-                //}
-                
-            // 4-Search
-                // 1 day/Cycle/Time{
-                    // For 50 actors logged-in , first actor will do 10 searches, second actor will do 5 retweets,so on
-                    // user1 - n/5 - 10
-                    // user2 - n/10 - 5
-                    // user3 - n/15 - 3
-                    // user4 - n/20 - 3 ..... user35 - n/35 - 0 ...user50 - n/50- 0 search
-                
-                    //Search type randomly selected between search_hashtag and search_my_mentions
-                        // search hashtag - randomly select a hashtag from hashtags_list
-                        // search my_mentions -  send userid
-                //}
-                  
-                
-        //}
+            //Follow
+            // Sends list of followers 
+            let mutable fcount = 0
+            for i in 1 .. totalUsers do
+                let mutable follower_list = []
+                fcount <- totalUsers/i
+                activity_count.[i] <- totalUsers/i
+                if fcount = totalUsers then
+                    fcount <- fcount - 1
+                    activity_count.[i] <-activity_count.[i]-1
+                for i in 1 .. fcount do
+                    let mutable temp = random.Next(1,totalUsers+1)
+                    while containsNumber temp follower_list && containsNumber i follower_list do
+                        temp <- random.Next(1,totalUsers+1)
+                    follower_list <- follower_list @ [temp]
+                let jsonData :  DataTypes.Request.followRequest = { uid = string i ; follow_list = follower_list}
+                let data = Json.serialize jsonData
+                Client.sendRequest "followRequest" data 
+            mailbox.Self <! BeginProcess
         
-    }
+        | BeginProcess ->
+            
+            let mutable n = 0
+            let mutable data = string n
+            for i in 1 .. 50 do    
+                while active_state.[n] = 1 do
+                    n <- random.Next(1,totalUsers+1)
+                //send login request to client
+                
+                //To create a list of actions
+                let mutable action_list = []
+                for i in 1 .. activity_count.[n] do
+                    let mutable temp = random.Next(1,4)
+                    action_list <- action_list @ [temp]
+                let jsonData :  DataTypes.Request.loginRequest = { uid = string i ; password = " " ; actions_list = action_list}
+                let data = Json.serialize jsonData
+                Client.sendRequest "loginRequest" data
+                active_state.[n] <- 1
+                
+                
+        //While login, actions_list has been sent
+        //Each actor(user), according to their list will perform these actions
+        // 1 - Tweet ; 2 -  Retweet; 3 - Search
+                
+        | Tweet uid ->
+           let mutable user_id = random.Next(1,totalUsers+1)
+           let mutable hashtag_1 = hashtag_list.[random.Next(hashtag_list.Length)]
+           let mutable hashtag_2 = hashtag_list.[random.Next(hashtag_list.Length)]
+           let mutable message = "Blah Blah Blah @"+ string user_id + " Blah Blah Blah Blah #" + string hashtag_1 + " #"+ string hashtag_2
+           Client.sendRequest "submitTweetRequest" message
+           
+        | Retweet uid ->
+            Client.sendRequest "submitReTweetRequest" uid
+         
+        | Search uid ->
+            let mutable search_option = random.Next(1,3)
+            if search_option = 1 then
+                //search_option = 1 -> mymentions search
+                Client.sendRequest "myMention"  uid
+            else
+                //search_option = 2 -> hashtag search
+                let mutable to_search = hashtag_list.[random.Next(hashtag_list.Length)]
+                Client.sendRequest "tweetWithHashTagSearch" to_search
+                
+        //When all the list of actions ends, server sends a message after which the user logsout
+        | Logout uid ->
+            let user_id = int uid
+            active_state.[user_id] <- 0
+            Client.sendRequest "logoutRequest" uid
+            logout_count <- logout_count + 1
+            if logout_count = 50 then
+                logout_count <- 0
+                mailbox.Self <! Done
+            
+        | Done ->
+            cycle_count <- cycle_count+1
+            //Terminate
+            if cycle_count = 10 then
+                mailbox.Context.System.Terminate () |> ignore
+            
+            else
+                mailbox.Self <! BeginProcess
+                       
+        return! loop()               
+    } loop()
 
+let simulator_actor = spawn system "simulator" simulator
+simulator_actor <! Start
 
-//let simulator_actor = spawn system "simulator" simulator
-//simulator_actor <! Start
