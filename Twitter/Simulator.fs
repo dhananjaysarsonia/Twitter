@@ -171,8 +171,10 @@ let simulator(mailbox : Actor<_>) =
             printf "Cycle count is %i \n" cycle_count
             //Terminate
             timer.Stop()
+            
             printfn "Day %i ends." cycle_count
             printfn "Time taken to process %i requests is %f milliseconds." activity_daycount timer.Elapsed.TotalMilliseconds
+            timer.Reset()
             if cycle_count = 3 then
                 printf "\n\n\n\n\n\n********************************************************Simulation Complete***************************************** \n \n \n"
                 mailbox.Context.System.Terminate () |> ignore
