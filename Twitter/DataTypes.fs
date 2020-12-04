@@ -145,7 +145,15 @@ module Request =
         [<Literal>]
         let searchRequest = "searchRequest"
     
-    
+        
+        [<Literal>]
+        let myMentionSearch = "myMention"
+        [<Literal>]
+        let allHashtagSearch = "allHashtagSearch"
+        [<Literal>]
+        let userSearch = "userSearch"
+        [<Literal>]
+        let tweetWithHashTagSearch = "tweetWithHashTagSearch"
     
     
     type masterData = {
@@ -153,14 +161,6 @@ module Request =
         data : string
     }
     
-    [<Literal>]
-    let myMentionSearch = "myMention"
-    [<Literal>]
-    let allHashtagSearch = "allHashtagSearch"
-    [<Literal>]
-    let userSearch = "userSearch"
-    [<Literal>]
-    let tweetWithHashTagSearch = "tweetWithHashTagSearch"
     type searchMaster = {
         option : string
         data : string
@@ -173,7 +173,7 @@ module Request =
     type loginRequest = {
         uid : string
         password : string
-        actions_list : int list
+        actions_list : masterData list
     }
     
     type followRequest = {
