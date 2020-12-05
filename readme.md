@@ -24,15 +24,6 @@ dotnet fsi --langversion:preview Simulator.fsx
 
 NOTE: PLEASE DO NOT PRESS ANY KEY AS IT WILL TERMINATE THE PROGRAM
 
-**dotnet fsi --langversion:preview _________.fsx numUsers**
- 
-numUsers is the total number of users you want to simulate
-
-#### Quick copy paste commands
-
-- dotnet fsi --langversion:preview _________.fsx 100 
-- dotnet fsi --langversion:preview _________.fsx 1000
-
 #### What is working?
 We have tested the program for 2500 users. 
 
@@ -43,9 +34,3 @@ We have tested the program for 2500 users.
 
 ##### Maximum Number of users simulated - 
 5000 users are working stable. We can push it to 10000 but as we reported above Akka.remote is generating some errors with data trasnfers.
-
-
-
-
-
-
