@@ -1,5 +1,6 @@
 module Twitter.SQLQueries
 
+open System
 open System.Data.SQLite
 open System.Data.SQLite
 open System.Data.SQLite
@@ -130,6 +131,7 @@ let dbGetTweetFotTweetIdWithConnectionOpen (tweetId : string) (connection : SQLi
     let command = new SQLiteCommand(sql, connection)
     command.Parameters.AddWithValue("@tweetId", tweetId) |> ignore
     let reader = command.ExecuteReader()
+    
     while reader.Read() do
         let data : tweet = {
             tweetId = reader.["tweetId"].ToString()
@@ -144,7 +146,22 @@ let dbGetTweetFotTweetIdWithConnectionOpen (tweetId : string) (connection : SQLi
     }
     tweetList
     
+
+let dbCheckLogin (userId : string) (password : string) (connection : SQLiteConnection) =
+    connection.Open()
+    let sql = "Select * from user WHERE uid = @uid AND password = @password"
+    let command = new SQLiteCommand(sql, connection)
+    command.Parameters.AddWithValue("@uid", userId) |> ignore
+    command.Parameters.AddWithValue("@password", password) |> ignore
+    let reader = command.ExecuteReader()
     
+    let flag = reader.Read()
+    connection.Close()
+    flag
+    
+    
+
+
 let dbGetTweetFotTweetIdWithConnectionNotOpen (tweetId : string) (connection : SQLiteConnection) =
     connection.Open()
     let mutable tweets : list<tweet> = []

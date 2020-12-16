@@ -8,11 +8,8 @@
     <ItemGroup>
         <Compile Include="DataTypes.fs" />
         <Compile Include="SQLQueries.fs" />
-        <Compile Include="Client.fs" />
-        <Content Include="JSONDOC.txt" />
-        <Compile Include="JsonIO.fs" />
         <Compile Include="Server.fs" />
-        <Compile Include="Simulator.fs" />
+        <Compile Include="Client.fs" />
     </ItemGroup>
 
     <ItemGroup>

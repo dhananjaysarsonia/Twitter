@@ -23,6 +23,9 @@ open System
 open System.Collections.Generic
 open System.Configuration
 open System.Data.SQLite
+open System.Data.SQLite
+open System.Data.SQLite
+open System.Net.WebSockets
 open System.Threading
 open Akka.Actor
 open FSharp.Data.JsonProvider
@@ -31,7 +34,6 @@ open Twitter.DataTypes
 open Twitter.DataTypes.Request
 open Twitter.DataTypes.Response
 open Akka.FSharp
-open Twitter.Client
 open Twitter.DataTypes.simulator
 
 open Suave.ServerErrors
@@ -107,19 +109,23 @@ let serverSystem = System.create "serverSystem" (Configuration.defaultConfig())
 
 
 type ServerDataWrapper = 
-    |Request of string*IActorRef
+    |Request of string*WebSocket
     |Init 
 
 
-let mutable liveActorMap = new Dictionary<string, IActorRef>()
+let mutable liveActorMap = new Dictionary<string, WebSocket>()
 
-
-let responseSend (actor : IActorRef) (option : string) (data : string) =
+let responseSend (actor : Suave.WebSocket.WebSocket) (option : string) (data : string) =
     let response : Response.masterData = {
         option = option
         data = data
     }
-    actor <! Json.serialize response
+    let res = Json.serialize response
+    let byteResponse =
+      res
+      |> System.Text.Encoding.ASCII.GetBytes
+      |> ByteSegment
+    Async.RunSynchronously(actor.send Text byteResponse true) |> ignore
  
 let registerActor(mailBox : Actor<_>) =
     let rec loop() = actor{
@@ -179,7 +185,7 @@ let updateFeedsActor(mailBox : Actor<_>) =
             
            // connection.Close()
             
-            responseSend actorRef DataTypes.Response.types.sendTweetResponse "OK"
+            responseSend actorRef DataTypes.Response.types.sendTweetResponse (Json.serialize tweet)
             
         return! loop()
     }
@@ -202,21 +208,6 @@ let tweetActor(mailBox : Actor<_>) =
             //check if it's a retweet
             let timestamp = string <| Guid.NewGuid()
             let tweetIdGen = tweet.uid + timestamp
-            //connection.Open()
-            SQLQueries.dbInsertTweet tweetIdGen tweet.tweet tweet.uid tweet.isRetweet tweet.origOwner connection
-            
-            //if not a retweet we need to put mentions and hash tags
-            if not tweet.isRetweet then
-                for hashtag in tweet.hashtags do
-                    SQLQueries.dbInsertHashTag hashtag connection
-                    SQLQueries.dbInsertHashTagForTweet hashtag tweet.uid tweet.tweetId tweet.tweet connection
-                for mention in tweet.mentions do
-                    SQLQueries.dbInsertMention tweetIdGen tweet.tweet mention tweet.uid connection
-                
-          //  connection.Close()
-            
- 
-//********************************  call feed actor here
             let tweetForFeed : Request.tweetSubmitRequest = {
                 tweet = tweet.tweet
                 tweetId = tweetIdGen
@@ -228,6 +219,23 @@ let tweetActor(mailBox : Actor<_>) =
                 origOwner = tweet.origOwner
                 
             }
+//            tweet.tweetId = tweetIdGen
+            //connection.Open()
+            SQLQueries.dbInsertTweet tweetIdGen tweet.tweet tweet.uid tweet.isRetweet tweet.origOwner connection
+            
+            //if not a retweet we need to put mentions and hash tags
+            if not tweet.isRetweet then
+                for hashtag in tweet.hashtags do
+                    SQLQueries.dbInsertHashTag hashtag connection
+                    SQLQueries.dbInsertHashTagForTweet hashtag tweet.uid tweetIdGen tweet.tweet connection
+                for mention in tweet.mentions do
+                    SQLQueries.dbInsertMention tweetIdGen tweet.tweet mention tweet.uid connection
+                
+          //  connection.Close()
+            
+ 
+//********************************  call feed actor here
+           
             
             UpdateFeedActor <! ServerDataWrapper.Request((Json.serialize tweetForFeed), actorRef)
            // responseSend actorRef DataTypes.Response.types.sendTweetResponse "OK"
@@ -355,21 +363,22 @@ let serverActor(mailBox : Actor<_>) =
     let rec loop() = actor{
         let! message = mailBox.Receive ()
         let reqData = Json.deserialize<Request.masterData> message
+        
        // printf "%s" reqData.data
         match reqData.option with
-        | Request.types.registerRequest ->
-            //register user here
-           // printf "registering user here"
-            let data  = ServerDataWrapper.Request(reqData.data, mailBox.Context.Sender)
-            
-            RegistrationActor <! data
-            
+//        | Request.types.registerRequest ->
+//            //register user here
+//           // printf "registering user here"
+//            let data  = ServerDataWrapper.Request(reqData.data, liv)
+//            
+//            RegistrationActor <! data
+//            
             
         | Request.types.loginRequest ->
           //  printf "login"
             let loginData = Json.deserialize<Request.loginRequest> reqData.data
-            liveActorMap.Add(loginData.uid, mailBox.Context.Sender)
-            responseSend mailBox.Context.Sender DataTypes.Response.types.loginResponse "loggedIn"
+            //liveActorMap.Add(loginData.uid, liveActorMap.[reqData.uid])
+            responseSend (liveActorMap.[reqData.uid]) DataTypes.Response.types.loginResponse "loggedIn"
             
             
         | Request.types.logoutRequest ->
@@ -378,29 +387,29 @@ let serverActor(mailBox : Actor<_>) =
             liveActorMap.Remove(logoutData.uid) |> ignore
             
         | Request.types.submitTweetRequest ->
-            let data  = ServerDataWrapper.Request(reqData.data, mailBox.Context.Sender)
+            let data  = ServerDataWrapper.Request(reqData.data, liveActorMap.[reqData.uid])
             
             TweetActor <! data
             
         | Request.types.submitReTweetRequest ->
-            let data  = ServerDataWrapper.Request(reqData.data, mailBox.Context.Sender) 
+            let data  = ServerDataWrapper.Request(reqData.data, liveActorMap.[reqData.uid]) 
             TweetActor <! data
             
         | Request.types.followRequest ->
-            let data  = ServerDataWrapper.Request(reqData.data, mailBox.Context.Sender)
+            let data  = ServerDataWrapper.Request(reqData.data, liveActorMap.[reqData.uid])
          //   printf "follow"
             FollowActor <! data
             
         | DataTypes.Request.types.followBulkRequest ->
-            let data  = ServerDataWrapper.Request(reqData.data, mailBox.Context.Sender)
+            let data  = ServerDataWrapper.Request(reqData.data, liveActorMap.[reqData.uid])
         //    printf "follow"
             FollowMassActor <! data
         | Request.types.feedRequest ->
-            let data  = ServerDataWrapper.Request(reqData.data, mailBox.Context.Sender)
+            let data  = ServerDataWrapper.Request(reqData.data, liveActorMap.[reqData.uid])
             FeedActor <! reqData.data
         
         | Request.types.searchRequest ->
-            let data  = ServerDataWrapper.Request(reqData.data, mailBox.Context.Sender)
+            let data  = ServerDataWrapper.Request(reqData.data, liveActorMap.[reqData.uid])
 //            printf "*****************SEARCH*****************************"
 //            printf "SEARCH DATA %s \n" reqData.data
             //printf "search" // can be of multiple types
@@ -420,72 +429,6 @@ let serverStarter =
 
 
 
-let clientSystem = Client.system
-
-//simulation
-
-let createUserSimu userId password=
-    let reg : DataTypes.Request.registerRequest = {
-        uid = userId
-        password = password
-    }
-    let data : DataTypes.Request.masterData = {
-        option = Request.types.registerRequest
-        data = Json.serialize reg
-    }
-    Json.serialize data
-    
-    
-let createFollowSimu meId youId =
-    let req : DataTypes.Request.followRequest = {
-        uid = meId
-        follow_id = youId
-    }
-    
-    let data : DataTypes.Request.masterData = {
-        option = Request.types.followRequest
-        data = Json.serialize req
-    }
-    Json.serialize data
-    
-let loginSimu uid =
-    let req : loginRequest = {
-        uid = uid
-        password = ""
-    }
-    let data : DataTypes.Request.masterData = {
-        option = Request.types.loginRequest
-        data = Json.serialize req
-    }
-    Json.serialize data
-
-
-let tweetSimu tweetText uid=
-    let tweet : DataTypes.simulator.tweetData = {
-        tweet = tweetText
-        uid = uid
-        
-    }
-    
-    let data : DataTypes.Request.masterData = {
-        option = Request.types.submitTweetRequest
-        data = Json.serialize tweet
-    }
-    Json.serialize data
-    
-
-let getFeed uid =
-    let req : DataTypes.Request.feedRequest = {
-        uid = uid
-    }
-    
-    let data : DataTypes.Request.masterData = {
-        option = Request.types.feedRequest
-        data = Json.serialize req
-    }
-    Json.serialize data
-    
-    
     
 let ws (webSocket : WebSocket) (context: HttpContext) =
   socket {
@@ -496,11 +439,8 @@ let ws (webSocket : WebSocket) (context: HttpContext) =
       match msg with
       | (Text, data, true) ->
         let message = UTF8.toString data
-        printf "%s" message
-//        let messageObject = Json.deserialize<MessageType> message 
-//        if messageObject.action = "initsocket" then do 
-//          let userId =  messageObject.data
-//          UserService.Service.UpdateSocket userId webSocket
+        let loginData = Json.deserialize<Request.loginRequest> message
+        liveActorMap.Add(loginData.uid, webSocket)
 
       | (Close, _, _) ->
         printfn "C%A" Close
@@ -510,33 +450,55 @@ let ws (webSocket : WebSocket) (context: HttpContext) =
 
       | _ -> printfn "Matched Nothing %A" msg
     }
+  
+  
+//let reqHandler   
       
+      
+let parseRequestAndSendProcessing(byteData : byte[]) =
+    let message = System.Text.Encoding.UTF8.GetString(byteData)
+    let request = Json.deserialize<Request.masterData> message
+    match request.option with 
+    | Request.types.loginRequest ->
+        let connection = new SQLiteConnection(connectionStringMemory)
+        let loginData = Json.deserialize<Request.loginRequest> request.data    
+        let flag = SQLQueries.dbCheckLogin loginData.uid loginData.password connection
+        connection.Dispose()
+        if flag then
+            "ok"
+        else
+            "error"
+    | Request.types.registerRequest ->
+        let connection = new SQLiteConnection(connectionStringMemory)
+        let registerData = Json.deserialize<Request.registerRequest> request.data
+        SQLQueries.dbAddNewUser registerData.uid registerData.password connection
+        connection.Dispose()
+        "ok"
+    | _ ->
+        serverStarter <! message
+        "ok"
+
+let handleApiRequest =
+  request (fun req ->
+  req.rawForm
+  |> parseRequestAndSendProcessing
+  |> OK )
+  >=> setMimeType "application/json"  
       
 let app : WebPart =
     choose[
         path "/" >=> OK "Success"
         path "/websocket" >=> handShake ws
+        path "/api" >=> POST >=> handleApiRequest
+        NOT_FOUND "error 404"
+
        
     ]
 
+let startServer =
+    async{
+    startWebServer { defaultConfig with logger = Targets.create Verbose [||] } app
+    }
+
 
     
-//    
-//let user1 = spawn clientSystem "1" Client.clientActor
-//let user2 = spawn clientSystem "2" Client.clientActor
-//
-//user1 <! createUserSimu "1" "123"
-//user2 <! createUserSimu "2" "123"
-//Thread.Sleep(1000)
-//user1 <! loginSimu "1"
-//user2 <! loginSimu "2"
-//Thread.Sleep(1000)
-//user1 <! tweetSimu "First Tweet" "1"
-//user2 <! tweetSimu "Second Tweet @1" "2"
-//
-//System.Console.ReadLine() |> ignore
-
-
-//let's create user table
-
-

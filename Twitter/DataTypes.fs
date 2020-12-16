@@ -159,6 +159,7 @@ module Request =
         let searchRequest = "searchRequest"
     
     type masterData = {
+        uid : string
         option : string
         data : string
     }

@@ -3,6 +3,7 @@ module Twitter.Client
 open System.Collections.Generic
 open System.ComponentModel.DataAnnotations
 open System.Data.SQLite
+open System.Text
 open Akka.Actor
 open FSharp.Data.JsonProvider
 open FSharp.Json
@@ -23,20 +24,12 @@ open System.Net.WebSockets
 open System.Threading
 open System.Threading.Tasks
 open System.Collections.Generic
+open Server
 
-let config =
-    Configuration.parse
-        @"akka {
-            actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-            remote.helios.tcp {
-                hostname = localhost
-                port = 0
-            }
-        }"
 printf "client"
 let system = System.create "client" (Configuration.defaultConfig())
 
-
+Async.Start Server.startServer
 
 let ws = new ClientWebSocket()
 let uri = new Uri("ws://localhost:8080/websocket")
@@ -49,10 +42,11 @@ let cts = new CancellationTokenSource()
 
 //let server = system.ActorSelection("akka.tcp://serverSystem@localhost:9001/user/server")
 
-let sendRequest option data =
+let sendRequest option data uid=
     let req : DataTypes.Request.masterData = {
         option = option
         data = data
+        uid = uid
     }
     let jsonString = Json.serialize req
     let response = Http.Request("http://127.0.0.1:8080/api",httpMethod = "POST",headers = [ ContentType HttpContentTypes.Json ],body = TextRequest jsonString)
@@ -64,10 +58,12 @@ let sendRequest option data =
     
       //server <! Json.serialize req
 
-let reqMaker option data =
+let reqMaker option data uid=
     let req : DataTypes.Request.masterData = {
         option = option
         data = data
+        uid = uid
+
     }
     Json.serialize req
 
@@ -83,8 +79,9 @@ let rec socketHandler () =
     async {
         let segment = new ArraySegment<Byte>( Array.create (1500) Byte.MinValue)
         let task =  ws.ReceiveAsync(segment,wcts)
-        while not (task.IsCompleted) do
+        while not task.IsCompleted do
             ()
+//        task.Wait()
         let response = System.Text.Encoding.ASCII.GetString (segment.Array)
         printfn "\n Server Response%s" response
         return! socketHandler()
@@ -101,155 +98,23 @@ let parseTweet (tweet:string) =
                     mentions <- mentions @ [word.[1..]]
             ( List.toArray(hashtags),mentions |> List.toArray)
 
-let clientActor(mailBox : Actor<_>) =
-    let mutable uid : string = ""
-    let mutable count = 0
-    let mutable feed: DataTypes.Response.feeds = nullFeed 
-    let rec loop() = actor{
-        let! message = mailBox.Receive()
-        let masterData = Json.deserialize<DataTypes.simulator.master> message
-        
-        match masterData.option with
-        | DataTypes.Request.types.registerRequest ->
-            let req = Json.deserialize<DataTypes.Request.registerRequest> masterData.data
-            uid <- string <| req.uid
-            printf "%s" (sendRequest DataTypes.Request.types.registerRequest masterData.data)
-            
-    
-                                 
-            
-        | DataTypes.Request.types.loginRequest ->
-            let req = Json.deserialize<DataTypes.Request.loginRequest> masterData.data
-            uid <- req.uid
-            let res = sendRequest DataTypes.Request.types.loginRequest masterData.data
-            if(res = "ok") then
-                let task = ws.ConnectAsync(uri, wcts)
-                while not(task.IsCompleted) do
-                    () //nothing
-                Async.Start(socketHandler(), cancellationToken = cts.Token)
-                //toDo
-                //push userId in socket
-                
-                
-                
-                   
-            
-            
-        | DataTypes.Request.types.logoutRequest ->
-            let req = Json.deserialize<DataTypes.Request.logoutRequest> masterData.data
-            uid <- req.uid
-            sendRequest DataTypes.Request.types.logoutRequest masterData.data
-            
-            
-        | DataTypes.Request.types.submitTweetRequest ->
-            let rawTweet = Json.deserialize<DataTypes.simulator.tweetData> masterData.data
-            //*****************************************
-            //NEED TO PARSE ARRAYS
-            let hashtag, mention = parseTweet rawTweet.tweet
-//            let mention: string[] = [||]
-//            let hashtag: string[] = [||]
-            let tweetData : DataTypes.Request.tweetSubmitRequest = {
-                tweet = rawTweet.tweet
-                tweetId = ""
-                uid = rawTweet.uid
-                mentions = mention
-                hashtags = hashtag
-                isRetweet = false
-                origOwner = ""
-            }
-            sendRequest DataTypes.Request.types.submitTweetRequest (Json.serialize tweetData)
-             
-            
-        | DataTypes.Request.types.submitReTweetRequest  ->
-            let feedData = feed.rows
-            
-            if feedData.Length <> 0 then
-                let random = new System.Random()
-                let index = random.Next(0, feedData.Length)
-                let row = feedData.[index]
-                
-                let tweetData : DataTypes.Request.tweetSubmitRequest = {
-                    tweetId = ""
-                    tweet = row.tweet.tweet
-                    isRetweet = true
-                    uid = uid
-                    mentions = [||]
-                    hashtags = [||]
-                    origOwner = row.uid
-                    
-                }
-                sendRequest DataTypes.Request.types.submitReTweetRequest (Json.serialize tweetData)
-                
-               
-                
-                 
-        
-        | DataTypes.Request.types.followRequest ->
-            sendRequest DataTypes.Request.types.followRequest masterData.data
-            
-        | DataTypes.Request.types.followBulkRequest ->
-            sendRequest DataTypes.Request.types.followBulkRequest masterData.data
-//            let followData = Json.deserialize<DataTypes.Request.followRequest> masterData.data
-
-            
-            
-        | DataTypes.Request.types.feedRequest ->
-            let reqData : DataTypes.Request.feedRequest = {
-                uid = uid
-            }
-            sendRequest DataTypes.Request.types.feedRequest (Json.serialize reqData)
-
-        | DataTypes.Request.types.hashTagTweetRequest ->
-            //search for hashtag
-            let hashtag = Json.deserialize<DataTypes.Request.searchTweetWithHashTagRequest> masterData.data
-            let searchMaster : DataTypes.Request.searchMaster = {
-                option = DataTypes.Request.tweetWithHashTagSearch
-                data = string <| masterData.data
-            }
-            
-            sendRequest DataTypes.Request.types.searchRequest (Json.serialize searchMaster)
-            
-            
-            printf ""
-        | DataTypes.Request.types.mentionRequest ->
-            let hashtag = Json.deserialize<DataTypes.Request.searchMyMentionRequest> masterData.data
-            let searchMaster : DataTypes.Request.searchMaster = {
-                option = DataTypes.Request.myMentionSearch
-                data = string <| masterData.data
-            }
-            sendRequest DataTypes.Request.types.searchRequest (Json.serialize searchMaster)
-            
-            
-      
-        //responses
-            
-            
-        | _ ->
-            count <- count - 1
-            if count <= 0 then
-                mailBox.Self <! reqMaker DataTypes.DONEString " "
-            printf "error \n"
-        
-        return! loop()
-    }
-    loop()
-    
 
 let mutable continueFlag = true
 let mutable userId = ""
 while continueFlag do
-    printf "Please enter command \n"
+    Thread.Sleep(1000)
+    printf "\n Please enter command \n"
     let command: string = Console.ReadLine()
-    let commandArray = command.Split(" ")
+    let commandArray = command.Split("/")
     match commandArray.[0] with
-    | "signup" ->
+    | "register" ->
         let user = commandArray.[1]
         let password = commandArray.[2]
         let request: DataTypes.Request.registerRequest = {
             uid = user
             password = password
         }
-        let response = sendRequest DataTypes.Request.types.registerRequest (Json.serialize request)
+        let response = sendRequest DataTypes.Request.types.registerRequest (Json.serialize request) user
         if response.Equals("ok") then
             printf "User registered"
         else
@@ -262,7 +127,7 @@ while continueFlag do
             uid = user
             password = password
         }
-        let response = sendRequest DataTypes.Request.types.loginRequest (Json.serialize request)
+        let response = sendRequest DataTypes.Request.types.loginRequest (Json.serialize request) user
         if response.Equals("ok") then
             printf "User logged in"
             userId <- user
@@ -282,7 +147,7 @@ while continueFlag do
             uid = userId
             follow_id = toFollow
         }
-        let response = sendRequest DataTypes.Request.types.followRequest (Json.serialize request)
+        let response = sendRequest DataTypes.Request.types.followRequest (Json.serialize request) userId
         printf "%s" response
         
     | "tweet" ->
@@ -299,7 +164,7 @@ while continueFlag do
             isRetweet = false
             origOwner = ""
         }
-        let response = sendRequest DataTypes.Request.types.submitTweetRequest (Json.serialize tweetData)
+        let response = sendRequest DataTypes.Request.types.submitTweetRequest (Json.serialize tweetData) userId
         printf "%s" response
         
     | "mymention" ->
@@ -307,10 +172,10 @@ while continueFlag do
             uid = userId
         }
         let searchWrapper : DataTypes.Request.searchMaster = {
-            option = Request.types.mentionRequest
+            option = Request.myMentionSearch
             data = Json.serialize(request)
         }
-        let response = sendRequest DataTypes.Request.types.searchRequest (Json.serialize searchWrapper)
+        let response = sendRequest DataTypes.Request.types.searchRequest (Json.serialize searchWrapper) userId
         printf "%s" response
         
     | "hashtagsearch" ->
@@ -320,10 +185,10 @@ while continueFlag do
             hashtag = hashtag
         }
         let searchWrapper : DataTypes.Request.searchMaster = {
-            option = Request.types.hashTagTweetRequest
+            option = Request.tweetWithHashTagSearch
             data = Json.serialize(request)
         }
-        let response = sendRequest DataTypes.Request.types.searchRequest (Json.serialize searchWrapper)
+        let response = sendRequest DataTypes.Request.types.searchRequest (Json.serialize searchWrapper) userId
         printf "%s" response
         
         
