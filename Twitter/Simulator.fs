@@ -24,7 +24,7 @@ open Server
 //let args = fsi.CommandLineArgs
 //let totalUsers = System.Int32.Parse(args.[1])
 Server.serverStarter |> ignore
-let totalUsers = 1000
+let totalUsers = 100
 let mutable number_login = 50 * totalUsers / 100
     
 let system = System.create "system" (Configuration.defaultConfig())

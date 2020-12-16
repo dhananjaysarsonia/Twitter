@@ -21,6 +21,7 @@ module Twitter.Server
 
 open System
 open System.Collections.Generic
+open System.Configuration
 open System.Data.SQLite
 open System.Threading
 open Akka.Actor
@@ -33,11 +34,26 @@ open Akka.FSharp
 open Twitter.Client
 open Twitter.DataTypes.simulator
 
+open Suave.ServerErrors
+open Suave.Writers
+open Suave
+open Suave.Http
+open Suave.Operators
+open Suave.Filters
+open Suave.Successful
+open Suave.Files
+open Suave.RequestErrors
+open Suave.Logging
+open Suave.Utils
+open Suave.Sockets
+open Suave.Sockets.Control
+open Suave.WebSocket
+
 
 //let serverSetup = 
 
-//let databaseFilename = "/Users/dhananjaysarsonia/RiderProjects/Twitter/Twitter/tweeeeterdb"
-let databaseFilename = "tweeeeterdb"
+let databaseFilename = "/Users/dhananjaysarsonia/RiderProjects/Twitter/Twitter/tweeeeterdb"
+//let databaseFilename = "tweeeeterdb"
 SQLiteConnection.CreateFile(databaseFilename) 
 
 //let connectionString =  sprintf "Data Source=%s;Version=3;" "sqliteFile.sqlite"
@@ -87,7 +103,7 @@ let config =
             }
         }"
  
-let serverSystem = System.create "serverSystem" config
+let serverSystem = System.create "serverSystem" (Configuration.defaultConfig())
 
 
 type ServerDataWrapper = 
@@ -468,6 +484,43 @@ let getFeed uid =
         data = Json.serialize req
     }
     Json.serialize data
+    
+    
+    
+let ws (webSocket : WebSocket) (context: HttpContext) =
+  socket {
+    let mutable loop = true
+    printfn "Socket Connected"
+    while loop do
+      let! msg = webSocket.read()
+      match msg with
+      | (Text, data, true) ->
+        let message = UTF8.toString data
+        printf "%s" message
+//        let messageObject = Json.deserialize<MessageType> message 
+//        if messageObject.action = "initsocket" then do 
+//          let userId =  messageObject.data
+//          UserService.Service.UpdateSocket userId webSocket
+
+      | (Close, _, _) ->
+        printfn "C%A" Close
+        let emptyResponse = [||] |> ByteSegment
+        do! webSocket.send Close emptyResponse true
+        loop <- false
+
+      | _ -> printfn "Matched Nothing %A" msg
+    }
+      
+      
+let app : WebPart =
+    choose[
+        path "/" >=> OK "Success"
+        path "/websocket" >=> handShake ws
+       
+    ]
+
+
+    
 //    
 //let user1 = spawn clientSystem "1" Client.clientActor
 //let user2 = spawn clientSystem "2" Client.clientActor

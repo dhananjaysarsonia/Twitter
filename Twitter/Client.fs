@@ -15,7 +15,14 @@ open Twitter.DataTypes.Request
 open Twitter.DataTypes.Response
 open Akka.FSharp
 open Twitter.DataTypes.simulator
-
+open System.Net.WebSockets
+open FSharp.Data.HttpRequestHeaders
+open FSharp.Data
+open System
+open System.Net.WebSockets
+open System.Threading
+open System.Threading.Tasks
+open System.Collections.Generic
 
 let config =
     Configuration.parse
@@ -27,16 +34,35 @@ let config =
             }
         }"
 printf "client"
-let system = System.create "client" config
+let system = System.create "client" (Configuration.defaultConfig())
 
-let server = system.ActorSelection("akka.tcp://serverSystem@localhost:9001/user/server")
+
+
+let ws = new ClientWebSocket()
+let uri = new Uri("ws://localhost:8080/websocket")
+let wcts = new CancellationToken()
+let cts = new CancellationTokenSource()
+
+
+
+
+
+//let server = system.ActorSelection("akka.tcp://serverSystem@localhost:9001/user/server")
 
 let sendRequest option data =
     let req : DataTypes.Request.masterData = {
         option = option
         data = data
     }
-    server <! Json.serialize req
+    let jsonString = Json.serialize req
+    let response = Http.Request("http://127.0.0.1:8080/api",httpMethod = "POST",headers = [ ContentType HttpContentTypes.Json ],body = TextRequest jsonString)
+    match response.Body with
+    | Text text ->
+        text
+    | _ ->
+        "empty response"
+    
+      //server <! Json.serialize req
 
 let reqMaker option data =
     let req : DataTypes.Request.masterData = {
@@ -52,6 +78,18 @@ let nullFeed : DataTypes.Response.feeds = {
     rows = nullFeedList
 }
 
+
+let rec socketHandler () =
+    async {
+        let segment = new ArraySegment<Byte>( Array.create (1500) Byte.MinValue)
+        let task =  ws.ReceiveAsync(segment,wcts)
+        while not (task.IsCompleted) do
+            ()
+        let response = System.Text.Encoding.ASCII.GetString (segment.Array)
+        printfn "\n Server Response%s" response
+        return! socketHandler()
+    }
+
 let parseTweet (tweet:string) =
             let mutable hashtags = []
             let mutable mentions = []
@@ -66,7 +104,6 @@ let parseTweet (tweet:string) =
 let clientActor(mailBox : Actor<_>) =
     let mutable uid : string = ""
     let mutable count = 0
-    let mutable simuActor = mailBox.Context.Self
     let mutable feed: DataTypes.Response.feeds = nullFeed 
     let rec loop() = actor{
         let! message = mailBox.Receive()
@@ -75,51 +112,27 @@ let clientActor(mailBox : Actor<_>) =
         match masterData.option with
         | DataTypes.Request.types.registerRequest ->
             let req = Json.deserialize<DataTypes.Request.registerRequest> masterData.data
-            simuActor <- mailBox.Context.Sender
             uid <- string <| req.uid
-            sendRequest DataTypes.Request.types.registerRequest masterData.data
+            printf "%s" (sendRequest DataTypes.Request.types.registerRequest masterData.data)
             
-        |DataTypes.Request.types.loginRequestBulk ->
-            let req = Json.deserialize<DataTypes.Request.loginWithActionsRequest> masterData.data
-            uid <- req.uid
-            count <- req.actionList.Length
-            for action in req.actionList do
-                let desAction = Json.deserialize<DataTypes.simulator.master> action
-                match desAction.option with
-                | DataTypes.Request.types.submitTweetRequest ->
-                    let rawTweet = desAction.data
-                    let tweet : DataTypes.simulator.tweetData = {
-                        uid = uid
-                        tweet = rawTweet
-                    }
-                    mailBox.Self <! reqMaker DataTypes.Request.types.submitTweetRequest (Json.serialize tweet) 
-                | DataTypes.Request.types.submitReTweetRequest ->
-                    mailBox.Self <! action
-                | DataTypes.Request.types.mentionRequest ->
-                    let data : DataTypes.Request.searchMyMentionRequest = {
-                        uid = uid
-                    }
-                    mailBox.Self <! reqMaker DataTypes.Request.types.mentionRequest (Json.serialize data)
-                | DataTypes.Request.types.hashTagTweetRequest ->
-                    let tag = desAction.data
-                    let data : DataTypes.Request.searchTweetWithHashTagRequest = {
-                        uid = uid
-                        hashtag = tag
-                    }
-                    mailBox.Self <! reqMaker DataTypes.Request.types.hashTagTweetRequest (Json.serialize data)
-                | _ ->
-                    printf "Some unexpected error occurred"
-                
-                    
-                
-                    
-        
+    
+                                 
             
         | DataTypes.Request.types.loginRequest ->
             let req = Json.deserialize<DataTypes.Request.loginRequest> masterData.data
             uid <- req.uid
-            sendRequest DataTypes.Request.types.loginRequest masterData.data
-
+            let res = sendRequest DataTypes.Request.types.loginRequest masterData.data
+            if(res = "ok") then
+                let task = ws.ConnectAsync(uri, wcts)
+                while not(task.IsCompleted) do
+                    () //nothing
+                Async.Start(socketHandler(), cancellationToken = cts.Token)
+                //toDo
+                //push userId in socket
+                
+                
+                
+                   
             
             
         | DataTypes.Request.types.logoutRequest ->
@@ -209,90 +222,6 @@ let clientActor(mailBox : Actor<_>) =
             
       
         //responses
-        
-        
-        
-        |DataTypes.Response.types.registerResponse ->
-            count <- count - 1
-            if count <= 0 then
-                mailBox.Self <! reqMaker DataTypes.DONEString " "
-            printf ""
-            
-            //printf "Register response: %s" masterData.data
-            
-        |DataTypes.Response.types.loginResponse ->
-//            printf "Login Response: %s" masterData.data
-            count <- count - 1
-            if count <= 0 then
-                mailBox.Self <! reqMaker DataTypes.DONEString " "
-
-            printf ""
-        
-        |DataTypes.Response.types.sendTweetResponse ->
-//            printf "Send Tweet response: %s" masterData.data
-            printf ""
-            count <- count - 1
-            if count <= 0 then
-                mailBox.Self <! reqMaker DataTypes.DONEString " "
-            
-        |DataTypes.Response.types.followersResponse ->
-//            printf "get followers response %s" masterData.data
-            printf ""
-//            count <- count - 1
-//            if count <= 0 then
-//                mailBox.Self <! reqMaker DataTypes.DONEString " "
-            
-        |DataTypes.Response.types.followResponse ->
-//            printf "follow response: %s" masterData.data
-            printf ""
-//            count <- count - 1
-//            if count <= 0 then
-//                mailBox.Self <! reqMaker DataTypes.DONEString " "
-            
-        |DataTypes.Response.types.feedResponse ->
-            let resData = Json.deserialize<DataTypes.Response.feeds> masterData.data
-            
-            feed <- resData
-//            printf "Feed Response : %s" masterData.data
-            printf ""
-           
-            
-        |DataTypes.Response.types.sendTweetInFeed ->
-//            count <- count - 1
-//            if count <= 0 then
-//                mailBox.Self <! reqMaker DataTypes.DONEString " "
-            
-//            printf "Dynamic feed update feed update for liveActor : %s" masterData.data
-            printf ""
-            
-        |DataTypes.Response.types.hashTagTweetsResponse ->
-            //printf "******************tweet with HASHTAG search response: %s \n" masterData.data
-            count <- count - 1
-            if count <= 0 then
-                mailBox.Self <! reqMaker DataTypes.DONEString " "
-
-            printf ""
-        
-        |DataTypes.Response.types.allHashTagSearchResponse ->
-            printf ""
-            count <- count - 1
-            if count <= 0 then
-                mailBox.Self <! reqMaker DataTypes.DONEString " "
-            
-//            printf "///////////////////////////////////all hashtag response %s" masterData.data
-
-            
-        |DataTypes.Response.types.mentionResponse ->
-            printf ""
-            count <- count - 1
-            if count <= 0 then
-                mailBox.Self <! reqMaker DataTypes.DONEString " "
-            
-//            printf "//////////////////////////////mention response %s" masterData.data
-            
-        |DataTypes.DONEString ->
-            let data = DataTypes.Message.LogoutDone(uid)
-            simuActor <! data
             
             
         | _ ->
@@ -305,3 +234,146 @@ let clientActor(mailBox : Actor<_>) =
     }
     loop()
     
+
+let mutable continueFlag = true
+let mutable userId = ""
+while continueFlag do
+    printf "Please enter command \n"
+    let command: string = Console.ReadLine()
+    let commandArray = command.Split(" ")
+    match commandArray.[0] with
+    | "signup" ->
+        let user = commandArray.[1]
+        let password = commandArray.[2]
+        let request: DataTypes.Request.registerRequest = {
+            uid = user
+            password = password
+        }
+        let response = sendRequest DataTypes.Request.types.registerRequest (Json.serialize request)
+        if response.Equals("ok") then
+            printf "User registered"
+        else
+            printf "Invalid"
+    
+    | "login" ->
+        let user = commandArray.[1]
+        let password = commandArray.[2]
+        let request: DataTypes.Request.loginRequest = {
+            uid = user
+            password = password
+        }
+        let response = sendRequest DataTypes.Request.types.loginRequest (Json.serialize request)
+        if response.Equals("ok") then
+            printf "User logged in"
+            userId <- user
+            let task = ws.ConnectAsync(uri, wcts)
+            while not (task.IsCompleted) do
+                ()
+            Async.Start(socketHandler(), cancellationToken = cts.Token)
+            let socketMessage = Json.serialize request
+            let byteMessage = System.Text.Encoding.ASCII.GetBytes socketMessage
+            let segment = new ArraySegment<byte> (byteMessage)
+            let task = ws.SendAsync(segment, WebSocketMessageType.Text, true, wcts)
+            printf "Socket created"
+    
+    | "follow" ->
+        let toFollow = commandArray.[1]
+        let request: DataTypes.Request.followRequest = {
+            uid = userId
+            follow_id = toFollow
+        }
+        let response = sendRequest DataTypes.Request.types.followRequest (Json.serialize request)
+        printf "%s" response
+        
+    | "tweet" ->
+        let rawTweet = commandArray.[1]
+        let hashtag, mention = parseTweet rawTweet
+//            let mention: string[] = [||]
+//            let hashtag: string[] = [||]
+        let tweetData : DataTypes.Request.tweetSubmitRequest = {
+            tweet = rawTweet
+            tweetId = ""
+            uid = userId
+            mentions = mention
+            hashtags = hashtag
+            isRetweet = false
+            origOwner = ""
+        }
+        let response = sendRequest DataTypes.Request.types.submitTweetRequest (Json.serialize tweetData)
+        printf "%s" response
+        
+    | "mymention" ->
+        let request : DataTypes.Request.searchMyMentionRequest = {
+            uid = userId
+        }
+        let searchWrapper : DataTypes.Request.searchMaster = {
+            option = Request.types.mentionRequest
+            data = Json.serialize(request)
+        }
+        let response = sendRequest DataTypes.Request.types.searchRequest (Json.serialize searchWrapper)
+        printf "%s" response
+        
+    | "hashtagsearch" ->
+        let hashtag = commandArray.[1]
+        let request : DataTypes.Request.searchTweetWithHashTagRequest = {
+            uid = userId
+            hashtag = hashtag
+        }
+        let searchWrapper : DataTypes.Request.searchMaster = {
+            option = Request.types.hashTagTweetRequest
+            data = Json.serialize(request)
+        }
+        let response = sendRequest DataTypes.Request.types.searchRequest (Json.serialize searchWrapper)
+        printf "%s" response
+        
+        
+    | _ ->
+        printf "cannot recognize the command, please try again"
+    
+    
+    
+        
+//            
+//    | "tweet" ->
+//        let rawTweet = command.[1]
+//        let data = 
+//    
+   
+           
+    
+        
+
+
+
+//
+//    |DataTypes.Request.types.loginRequestBulk ->
+//            let req = Json.deserialize<DataTypes.Request.loginWithActionsRequest> masterData.data
+//            uid <- req.uid
+//            count <- req.actionList.Length
+//            for action in req.actionList do
+//                let desAction = Json.deserialize<DataTypes.simulator.master> action
+//                match desAction.option with
+//                | DataTypes.Request.types.submitTweetRequest ->
+//                    let rawTweet = desAction.data
+//                    let tweet : DataTypes.simulator.tweetData = {
+//                        uid = uid
+//                        tweet = rawTweet
+//                    }
+//                    mailBox.Self <! reqMaker DataTypes.Request.types.submitTweetRequest (Json.serialize tweet) 
+//                | DataTypes.Request.types.submitReTweetRequest ->
+//                    mailBox.Self <! action
+//                | DataTypes.Request.types.mentionRequest ->
+//                    let data : DataTypes.Request.searchMyMentionRequest = {
+//                        uid = uid
+//                    }
+//                    mailBox.Self <! reqMaker DataTypes.Request.types.mentionRequest (Json.serialize data)
+//                | DataTypes.Request.types.hashTagTweetRequest ->
+//                    let tag = desAction.data
+//                    let data : DataTypes.Request.searchTweetWithHashTagRequest = {
+//                        uid = uid
+//                        hashtag = tag
+//                    }
+//                    mailBox.Self <! reqMaker DataTypes.Request.types.hashTagTweetRequest (Json.serialize data)
+//                | _ ->
+//                    printf "Some unexpected error occurred"
+//                
