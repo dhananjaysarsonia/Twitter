@@ -79,9 +79,9 @@ let rec socketHandler () =
     async {
         let segment = new ArraySegment<Byte>( Array.create (1500) Byte.MinValue)
         let task =  ws.ReceiveAsync(segment,wcts)
-        while not task.IsCompleted do
-            ()
-//        task.Wait()
+//        while not task.IsCompleted do
+//            ()
+        task.Wait()
         let response = System.Text.Encoding.ASCII.GetString (segment.Array)
         printfn "\n Server Response%s" response
         return! socketHandler()
@@ -103,7 +103,7 @@ let mutable continueFlag = true
 let mutable userId = ""
 while continueFlag do
     Thread.Sleep(1000)
-    printf "\n Please enter command \n"
+    printf "\nPlease enter command: \n"
     let command: string = Console.ReadLine()
     let commandArray = command.Split("/")
     match commandArray.[0] with
@@ -140,6 +140,8 @@ while continueFlag do
             let segment = new ArraySegment<byte> (byteMessage)
             let task = ws.SendAsync(segment, WebSocketMessageType.Text, true, wcts)
             printf "Socket created"
+        else
+            printf "Authentication error"
     
     | "follow" ->
         let toFollow = commandArray.[1]
@@ -148,7 +150,7 @@ while continueFlag do
             follow_id = toFollow
         }
         let response = sendRequest DataTypes.Request.types.followRequest (Json.serialize request) userId
-        printf "%s" response
+        printf "%s \n" response
         
     | "tweet" ->
         let rawTweet = commandArray.[1]
@@ -165,7 +167,7 @@ while continueFlag do
             origOwner = ""
         }
         let response = sendRequest DataTypes.Request.types.submitTweetRequest (Json.serialize tweetData) userId
-        printf "%s" response
+        printf "%s \n" response
         
     | "mymention" ->
         let request : DataTypes.Request.searchMyMentionRequest = {
@@ -176,7 +178,7 @@ while continueFlag do
             data = Json.serialize(request)
         }
         let response = sendRequest DataTypes.Request.types.searchRequest (Json.serialize searchWrapper) userId
-        printf "%s" response
+        printf "%s \n" response
         
     | "hashtagsearch" ->
         let hashtag = commandArray.[1]
@@ -189,9 +191,31 @@ while continueFlag do
             data = Json.serialize(request)
         }
         let response = sendRequest DataTypes.Request.types.searchRequest (Json.serialize searchWrapper) userId
-        printf "%s" response
+        printf "%s \n" response
+    | "retweet" ->
+        let tweetId = commandArray.[1]
+        let request : DataTypes.Request.tweetSubmitRequest = {
+            tweet = ""
+            tweetId = tweetId
+            uid = userId
+            mentions = [||]
+            hashtags = [||]
+            isRetweet = true
+            origOwner = ""
+        }
+        let response = sendRequest DataTypes.Request.types.submitReTweetRequest (Json.serialize request) userId
+        printf "%s \n" response
+    | "feed" ->
+        let data: Request.feedRequest = {
+            uid = userId
+        }
+        let response = sendRequest DataTypes.Request.types.feedRequest (Json.serialize data) userId
+        printf "%s \n" response
         
         
+    | "logout" ->
+        continueFlag <- false
+    
     | _ ->
         printf "cannot recognize the command, please try again"
     

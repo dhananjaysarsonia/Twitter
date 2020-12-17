@@ -157,6 +157,8 @@ let getFeedActor(mailBox : Actor<_>) =
             let res = Json.deserialize<Request.feedRequest> data
             let connection = new SQLiteConnection(connectionStringMemory)
             let feed  = SQLQueries.dbGetFeed res.uid connection
+            printf "in feed"
+            
             responseSend actorRef DataTypes.Response.types.feedResponse (Json.serialize feed)
             
             //preparing response
@@ -205,39 +207,67 @@ let tweetActor(mailBox : Actor<_>) =
             //let's get tweet
             let tweet = Json.deserialize<Request.tweetSubmitRequest> data
             let connection = new SQLiteConnection(connectionStringMemory)    
-            //check if it's a retweet
+                //check if it's a retweet
             let timestamp = string <| Guid.NewGuid()
             let tweetIdGen = tweet.uid + timestamp
-            let tweetForFeed : Request.tweetSubmitRequest = {
-                tweet = tweet.tweet
-                tweetId = tweetIdGen
-                //flag = tweet.flag
-                isRetweet = tweet.isRetweet
-                mentions = tweet.mentions
-                hashtags = tweet.hashtags
-                uid = tweet.uid
-                origOwner = tweet.origOwner
+            if not tweet.isRetweet then 
                 
-            }
-//            tweet.tweetId = tweetIdGen
-            //connection.Open()
-            SQLQueries.dbInsertTweet tweetIdGen tweet.tweet tweet.uid tweet.isRetweet tweet.origOwner connection
-            
-            //if not a retweet we need to put mentions and hash tags
-            if not tweet.isRetweet then
-                for hashtag in tweet.hashtags do
-                    SQLQueries.dbInsertHashTag hashtag connection
-                    SQLQueries.dbInsertHashTagForTweet hashtag tweet.uid tweetIdGen tweet.tweet connection
-                for mention in tweet.mentions do
-                    SQLQueries.dbInsertMention tweetIdGen tweet.tweet mention tweet.uid connection
+                let tweetForFeed : Request.tweetSubmitRequest = {
+                    tweet = tweet.tweet
+                    tweetId = tweetIdGen
+                    //flag = tweet.flag
+                    isRetweet = tweet.isRetweet
+                    mentions = tweet.mentions
+                    hashtags = tweet.hashtags
+                    uid = tweet.uid
+                    origOwner = tweet.origOwner
+                    
+                }
+    //            tweet.tweetId = tweetIdGen
+                //connection.Open()
+                SQLQueries.dbInsertTweet tweetIdGen tweet.tweet tweet.uid tweet.isRetweet tweet.origOwner connection
                 
+                //if not a retweet we need to put mentions and hash tags
+                if not tweet.isRetweet then
+                    for hashtag in tweet.hashtags do
+                        SQLQueries.dbInsertHashTag hashtag connection
+                        SQLQueries.dbInsertHashTagForTweet hashtag tweet.uid tweetIdGen tweet.tweet connection
+                    for mention in tweet.mentions do
+                        SQLQueries.dbInsertMention tweetIdGen tweet.tweet mention tweet.uid connection
+                
+                UpdateFeedActor <! ServerDataWrapper.Request((Json.serialize tweetForFeed), actorRef)
+            else
+                let reqOwner = tweet.uid
+                let origTweetId = tweet.tweetId
+                let origTweet = SQLQueries.dbGetTweetFotTweetIdWithConnectionNotOpen origTweetId connection
+                SQLQueries.dbInsertTweet tweetIdGen origTweet.tweet reqOwner true origTweet.uid connection
+                let updatedTweet = SQLQueries.dbGetTweetFotTweetIdWithConnectionNotOpen tweetIdGen connection
+                
+                let tweetForFeed : Request.tweetSubmitRequest = {
+                    tweet = updatedTweet.tweet
+                    tweetId = updatedTweet.tweetId
+                    //flag = tweet.flag
+                    isRetweet = updatedTweet.flag
+                    mentions = [||]
+                    hashtags = [||]
+                    uid = updatedTweet.tweetId
+                    origOwner = updatedTweet.origTweetId
+                    
+                }
+                
+                
+                UpdateFeedActor <! ServerDataWrapper.Request((Json.serialize tweetForFeed), actorRef)
+               
+                
+                
+                    
           //  connection.Close()
             
  
 //********************************  call feed actor here
            
             
-            UpdateFeedActor <! ServerDataWrapper.Request((Json.serialize tweetForFeed), actorRef)
+            
            // responseSend actorRef DataTypes.Response.types.sendTweetResponse "OK"
 
             
@@ -406,7 +436,7 @@ let serverActor(mailBox : Actor<_>) =
             FollowMassActor <! data
         | Request.types.feedRequest ->
             let data  = ServerDataWrapper.Request(reqData.data, liveActorMap.[reqData.uid])
-            FeedActor <! reqData.data
+            FeedActor <! data
         
         | Request.types.searchRequest ->
             let data  = ServerDataWrapper.Request(reqData.data, liveActorMap.[reqData.uid])
@@ -463,11 +493,12 @@ let parseRequestAndSendProcessing(byteData : byte[]) =
         let connection = new SQLiteConnection(connectionStringMemory)
         let loginData = Json.deserialize<Request.loginRequest> request.data    
         let flag = SQLQueries.dbCheckLogin loginData.uid loginData.password connection
-        connection.Dispose()
         if flag then
             "ok"
         else
-            "error"
+            "Authentication failed"
+        //connection.Dispose()
+        
     | Request.types.registerRequest ->
         let connection = new SQLiteConnection(connectionStringMemory)
         let registerData = Json.deserialize<Request.registerRequest> request.data

@@ -155,12 +155,15 @@ let dbCheckLogin (userId : string) (password : string) (connection : SQLiteConne
     command.Parameters.AddWithValue("@password", password) |> ignore
     let reader = command.ExecuteReader()
     
-    let flag = reader.Read()
+    let flag = reader.HasRows
+    while reader.Read() do
+        ()
+    reader.Dispose()
+
     connection.Close()
     flag
     
     
-
 
 let dbGetTweetFotTweetIdWithConnectionNotOpen (tweetId : string) (connection : SQLiteConnection) =
     connection.Open()
@@ -182,7 +185,8 @@ let dbGetTweetFotTweetIdWithConnectionNotOpen (tweetId : string) (connection : S
     let tweetList : tweetList = {
         tweets = tweets
     }
-    tweetList
+    //printf "debug tweetlength: %i" tweets.Length
+    tweets.[0]
     
     
 //get feed for user
@@ -212,6 +216,7 @@ let dbGetFeed (uid : string) (connection : SQLiteConnection) =
         uid = uid
         rows = feedRows
     }
+    printf "debug feed rows: %i" feedRows.Length
     feed
 
 
